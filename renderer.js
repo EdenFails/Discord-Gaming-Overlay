@@ -45,9 +45,11 @@ function updateSectionsVisibility() {
     }
 
     if (showText && showVoice) {
-        // Both text and voice visible: prioritize voice list height to fit 6+ users cleanly
-        if (messagesContainer) messagesContainer.style.maxHeight = '140px';
-        if (voiceUsersContainer) voiceUsersContainer.style.maxHeight = '250px';
+        // Both text and voice visible: use user's custom section height settings
+        const tHeight = sectionsConfig.textSectionHeight || 140;
+        const vHeight = sectionsConfig.voiceSectionHeight || 250;
+        if (messagesContainer) messagesContainer.style.maxHeight = `${tHeight}px`;
+        if (voiceUsersContainer) voiceUsersContainer.style.maxHeight = `${vHeight}px`;
     } else if (showText) {
         // Text only
         if (messagesContainer) messagesContainer.style.maxHeight = 'calc(100vh - 40px)';
@@ -154,7 +156,11 @@ ipcRenderer.on('messages-update', (event, messages) => {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'gaming-overlay-message';
         
-        if (m.content) {
+        // Strip image/GIF/Tenor URLs from text line to keep messages compact
+        const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/gi;
+        const cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+
+        if (cleanContent) {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'gaming-overlay-author';
             authorSpan.style.color = m.author.color;
@@ -162,7 +168,7 @@ ipcRenderer.on('messages-update', (event, messages) => {
             
             const contentSpan = document.createElement('span');
             contentSpan.className = 'gaming-overlay-content';
-            contentSpan.innerHTML = parseCustomEmojis(m.content);
+            contentSpan.innerHTML = parseCustomEmojis(cleanContent);
             
             msgDiv.appendChild(authorSpan);
             msgDiv.appendChild(contentSpan);
@@ -170,7 +176,7 @@ ipcRenderer.on('messages-update', (event, messages) => {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'gaming-overlay-author';
             authorSpan.style.color = m.author.color;
-            authorSpan.textContent = m.author.username + ' attached a file:';
+            authorSpan.textContent = m.author.username + ':';
             msgDiv.appendChild(authorSpan);
         }
 

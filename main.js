@@ -3,6 +3,11 @@ const path = require('path');
 const WebSocket = require('ws');
 const Store = require('./store');
 
+// Fix Linux Wayland color space errors when rendering GIFs/images
+if (process.platform === 'linux') {
+    app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement');
+}
+
 const store = new Store({
     configName: 'user-preferences',
     defaults: {
@@ -15,6 +20,8 @@ const store = new Store({
         showVoiceSection: true,
         showVoiceNotifs: true,
         voiceSortOrder: 'friends',
+        textSectionHeight: 140,
+        voiceSectionHeight: 250,
         displayId: null,
         position: 'top-right',
         visibilityKey: 'CommandOrControl+Shift+H',
@@ -120,7 +127,9 @@ function createWindow() {
         mainWindow.webContents.send('set-sections-config', {
             showTextSection: store.get('showTextSection') !== false,
             showVoiceSection: store.get('showVoiceSection') !== false,
-            showVoiceNotifs: store.get('showVoiceNotifs') !== false
+            showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+            textSectionHeight: store.get('textSectionHeight') || 140,
+            voiceSectionHeight: store.get('voiceSectionHeight') || 250
         });
         mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
     });
@@ -317,6 +326,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('showVoiceSection', newConfig.showVoiceSection);
     store.set('showVoiceNotifs', newConfig.showVoiceNotifs);
     store.set('voiceSortOrder', newConfig.voiceSortOrder);
+    store.set('textSectionHeight', newConfig.textSectionHeight);
+    store.set('voiceSectionHeight', newConfig.voiceSectionHeight);
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -333,7 +344,9 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.webContents.send('set-sections-config', {
             showTextSection: newConfig.showTextSection,
             showVoiceSection: newConfig.showVoiceSection,
-            showVoiceNotifs: newConfig.showVoiceNotifs
+            showVoiceNotifs: newConfig.showVoiceNotifs,
+            textSectionHeight: newConfig.textSectionHeight || 140,
+            voiceSectionHeight: newConfig.voiceSectionHeight || 250
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
@@ -357,7 +370,9 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         mainWindow.webContents.send('set-sections-config', {
             showTextSection: previewConfig.showTextSection,
             showVoiceSection: previewConfig.showVoiceSection,
-            showVoiceNotifs: previewConfig.showVoiceNotifs
+            showVoiceNotifs: previewConfig.showVoiceNotifs,
+            textSectionHeight: previewConfig.textSectionHeight || 140,
+            voiceSectionHeight: previewConfig.voiceSectionHeight || 250
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
