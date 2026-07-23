@@ -132,6 +132,12 @@ function sendMessagesToOverlay() {
                             width: a.width,
                             height: a.height
                         })),
+                        embeds: (m.embeds || []).map((e: any) => ({
+                            type: e.type,
+                            url: e.url,
+                            image: e.image ? (e.image.proxyURL || e.image.url) : null,
+                            thumbnail: e.thumbnail ? (e.thumbnail.proxyURL || e.thumbnail.url) : null
+                        })),
                         author: {
                             username: author.globalName || author.username || "System",
                             color: memberColor || '#ffffff'

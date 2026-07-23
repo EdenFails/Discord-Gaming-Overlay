@@ -174,9 +174,14 @@ ipcRenderer.on('messages-update', (event, messages) => {
             msgDiv.appendChild(authorSpan);
         }
 
+        let hasRenderedMedia = false;
+
         if (m.attachments && m.attachments.length > 0) {
             m.attachments.forEach(a => {
-                if (a.content_type && a.content_type.startsWith('image/')) {
+                const isImage = (a.content_type && a.content_type.startsWith('image/')) || 
+                                (a.filename && /\.(gif|png|jpe?g|webp)$/i.test(a.filename));
+                if (isImage) {
+                    hasRenderedMedia = true;
                     const img = document.createElement('img');
                     img.src = a.proxy_url || a.url;
                     img.className = 'gaming-overlay-attachment';
@@ -191,6 +196,38 @@ ipcRenderer.on('messages-update', (event, messages) => {
                     msgDiv.appendChild(fileDiv);
                 }
             });
+        }
+
+        if (m.embeds && m.embeds.length > 0) {
+            m.embeds.forEach(e => {
+                const imgUrl = e.image || e.thumbnail;
+                if (imgUrl) {
+                    hasRenderedMedia = true;
+                    const img = document.createElement('img');
+                    img.src = imgUrl;
+                    img.className = 'gaming-overlay-attachment';
+                    img.onload = () => {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    };
+                    msgDiv.appendChild(img);
+                }
+            });
+        }
+
+        if (!hasRenderedMedia && m.content) {
+            const gifMatch = m.content.match(/(https?:\/\/[^\s]+\.(?:gif|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/i);
+            if (gifMatch && gifMatch[0]) {
+                const gifUrl = gifMatch[0];
+                if (gifUrl.endsWith('.gif') || gifUrl.endsWith('.webp')) {
+                    const img = document.createElement('img');
+                    img.src = gifUrl;
+                    img.className = 'gaming-overlay-attachment';
+                    img.onload = () => {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    };
+                    msgDiv.appendChild(img);
+                }
+            }
         }
         
         messagesContainer.appendChild(msgDiv);

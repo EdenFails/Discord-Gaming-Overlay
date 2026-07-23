@@ -76,6 +76,8 @@ function createWindow() {
         alwaysOnTop: true,
         skipTaskbar: true,
         focusable: false,
+        resizable: false,
+        hasShadow: false,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
@@ -88,7 +90,12 @@ function createWindow() {
 
     mainWindow = new BrowserWindow(windowOptions);
 
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    if (process.platform === 'linux') {
+        mainWindow.setIgnoreMouseEvents(true);
+    } else {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
+
     if (process.platform === 'win32') {
         mainWindow.setAlwaysOnTop(true, 'screen-saver');
     } else {
@@ -253,7 +260,11 @@ function checkHotkeys() {
             mainWindow.setIgnoreMouseEvents(false);
             mainWindow.focus();
         } else {
-            mainWindow.setIgnoreMouseEvents(true, { forward: true });
+            if (process.platform === 'linux') {
+                mainWindow.setIgnoreMouseEvents(true);
+            } else {
+                mainWindow.setIgnoreMouseEvents(true, { forward: true });
+            }
             if (typeof mainWindow.setFocusable === 'function') mainWindow.setFocusable(false);
         }
         mainWindow.webContents.send('toggle-typing', typingMode);
@@ -365,7 +376,11 @@ ipcMain.on('send-message', (event, content) => {
         });
     }
     typingMode = false;
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    if (process.platform === 'linux') {
+        mainWindow.setIgnoreMouseEvents(true);
+    } else {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
     if (typeof mainWindow.setFocusable === 'function') mainWindow.setFocusable(false);
     mainWindow.webContents.send('toggle-typing', false);
 });
