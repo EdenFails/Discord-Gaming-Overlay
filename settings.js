@@ -1,0 +1,162 @@
+const { ipcRenderer } = require('electron');
+
+const opacityInput = document.getElementById('opacity-input');
+const opacityVal = document.getElementById('opacity-val');
+const msgOpacityInput = document.getElementById('msg-opacity-input');
+const msgOpacityVal = document.getElementById('msg-opacity-val');
+const autoHideInput = document.getElementById('auto-hide-input');
+const autoHideDelayInput = document.getElementById('auto-hide-delay-input');
+const deleteMessagesInput = document.getElementById('delete-messages-input');
+const showTextSectionInput = document.getElementById('show-text-section-input');
+const showVoiceSectionInput = document.getElementById('show-voice-section-input');
+const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
+const voiceSortInput = document.getElementById('voice-sort-input');
+const displayInput = document.getElementById('display-input');
+const positionInput = document.getElementById('position-input');
+const visibilityKeyInput = document.getElementById('visibility-key-input');
+const typingKeyInput = document.getElementById('typing-key-input');
+const saveBtn = document.getElementById('save-btn');
+
+// Send live preview updates
+function sendLiveUpdate() {
+    ipcRenderer.send('preview-settings', {
+        opacity: parseFloat(opacityInput.value),
+        msgOpacity: parseFloat(msgOpacityInput.value),
+        autoHide: autoHideInput.checked,
+        autoHideDelay: parseInt(autoHideDelayInput.value),
+        deleteMessages: deleteMessagesInput.checked,
+        showTextSection: showTextSectionInput.checked,
+        showVoiceSection: showVoiceSectionInput.checked,
+        showVoiceNotifs: showVoiceNotifsInput.checked,
+        voiceSortOrder: voiceSortInput.value,
+        displayId: parseInt(displayInput.value),
+        position: positionInput.value
+    });
+}
+
+// Update opacity percentage text live and preview
+opacityInput.addEventListener('input', () => {
+    opacityVal.textContent = Math.round(opacityInput.value * 100) + '%';
+    sendLiveUpdate();
+});
+
+msgOpacityInput.addEventListener('input', () => {
+    msgOpacityVal.textContent = Math.round(msgOpacityInput.value * 100) + '%';
+    sendLiveUpdate();
+});
+
+autoHideInput.addEventListener('change', sendLiveUpdate);
+autoHideDelayInput.addEventListener('change', sendLiveUpdate);
+autoHideDelayInput.addEventListener('input', sendLiveUpdate);
+deleteMessagesInput.addEventListener('change', sendLiveUpdate);
+showTextSectionInput.addEventListener('change', sendLiveUpdate);
+showVoiceSectionInput.addEventListener('change', sendLiveUpdate);
+showVoiceNotifsInput.addEventListener('change', sendLiveUpdate);
+voiceSortInput.addEventListener('change', sendLiveUpdate);
+
+// Keybind listener logic
+let currentRecordingInput = null;
+
+function setupKeybindListener(inputElement) {
+    inputElement.addEventListener('focus', () => {
+        currentRecordingInput = inputElement;
+        inputElement.value = 'Listening...';
+        ipcRenderer.send('start-recording-hotkey');
+    });
+    
+    inputElement.addEventListener('blur', () => {
+        if (currentRecordingInput === inputElement) {
+            ipcRenderer.send('cancel-recording-hotkey');
+            currentRecordingInput = null;
+        }
+    });
+}
+
+ipcRenderer.on('recording-hotkey-progress', (event, combo) => {
+    if (currentRecordingInput) {
+        currentRecordingInput.value = combo;
+    }
+});
+
+ipcRenderer.on('recording-hotkey-done', (event, combo) => {
+    if (currentRecordingInput) {
+        currentRecordingInput.value = combo;
+        sendLiveUpdate();
+        currentRecordingInput.blur();
+        currentRecordingInput = null;
+    }
+});
+
+setupKeybindListener(visibilityKeyInput);
+setupKeybindListener(typingKeyInput);
+
+displayInput.addEventListener('change', sendLiveUpdate);
+positionInput.addEventListener('change', sendLiveUpdate);
+
+// Load current settings from main process
+ipcRenderer.on('load-settings', (event, { config, displays }) => {
+    opacityInput.value = config.opacity;
+    opacityVal.textContent = Math.round(config.opacity * 100) + '%';
+    
+    msgOpacityInput.value = config.msgOpacity || 0;
+    msgOpacityVal.textContent = Math.round((config.msgOpacity || 0) * 100) + '%';
+    
+    autoHideInput.checked = config.autoHide !== false;
+    autoHideDelayInput.value = config.autoHideDelay || 20;
+    deleteMessagesInput.checked = config.deleteMessages !== false;
+    showTextSectionInput.checked = config.showTextSection !== false;
+    showVoiceSectionInput.checked = config.showVoiceSection !== false;
+    showVoiceNotifsInput.checked = config.showVoiceNotifs !== false;
+    voiceSortInput.value = config.voiceSortOrder || 'friends';
+
+    positionInput.value = config.position;
+    visibilityKeyInput.value = config.visibilityKey;
+    typingKeyInput.value = config.typingKey;
+    
+    // Populate displays
+    displayInput.innerHTML = '';
+    displays.forEach((display, index) => {
+        const option = document.createElement('option');
+        option.value = display.id;
+        const isPrimary = display.bounds.x === 0 && display.bounds.y === 0 ? " (Primary)" : "";
+        option.textContent = `Display ${index + 1} - ${display.bounds.width}x${display.bounds.height}${isPrimary}`;
+        displayInput.appendChild(option);
+    });
+    
+    // Select current display
+    if (config.displayId) {
+        displayInput.value = config.displayId;
+    } else if (displays.length > 0) {
+        // Fallback to primary if not set
+        const primary = displays.find(d => d.bounds.x === 0 && d.bounds.y === 0) || displays[0];
+        displayInput.value = primary.id;
+    }
+});
+
+saveBtn.addEventListener('click', () => {
+    const newConfig = {
+        opacity: parseFloat(opacityInput.value),
+        msgOpacity: parseFloat(msgOpacityInput.value),
+        autoHide: autoHideInput.checked,
+        autoHideDelay: parseInt(autoHideDelayInput.value),
+        deleteMessages: deleteMessagesInput.checked,
+        showTextSection: showTextSectionInput.checked,
+        showVoiceSection: showVoiceSectionInput.checked,
+        showVoiceNotifs: showVoiceNotifsInput.checked,
+        voiceSortOrder: voiceSortInput.value,
+        displayId: parseInt(displayInput.value),
+        position: positionInput.value,
+        visibilityKey: visibilityKeyInput.value,
+        typingKey: typingKeyInput.value
+    };
+    
+    saveBtn.textContent = 'Saved!';
+    saveBtn.style.backgroundColor = '#2e8b57';
+    
+    setTimeout(() => {
+        saveBtn.textContent = 'Save Settings';
+        saveBtn.style.backgroundColor = '#5865F2';
+    }, 1500);
+
+    ipcRenderer.send('save-settings', newConfig);
+});

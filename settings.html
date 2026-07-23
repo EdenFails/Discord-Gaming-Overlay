@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gaming Overlay Settings</title>
+    <style>
+        body {
+            background-color: #2b2d31;
+            color: #dbdee1;
+            font-family: 'Inter', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #4f545c;
+            padding-bottom: 10px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #b5bac1;
+        }
+
+        .setting-description {
+            font-size: 12px;
+            color: #949ba4;
+            margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #5865F2;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            background-color: #1e1f22;
+            border: 1px solid #1e1f22;
+            color: #dbdee1;
+            padding: 10px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: #5865F2;
+        }
+
+        .save-btn {
+            background-color: #5865F2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .save-btn:hover {
+            background-color: #4752c4;
+        }
+
+        #opacity-val {
+            float: right;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h2>Settings</h2>
+    
+    <div class="setting-group">
+        <span class="setting-label">Window Background Opacity <span id="opacity-val">40%</span></span>
+        <div class="setting-description">How dark the entire overlay background is.</div>
+        <input type="range" id="opacity-input" min="0" max="1" step="0.05" value="0.4">
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Message Background Opacity <span id="msg-opacity-val">0%</span></span>
+        <div class="setting-description">How dark the background behind each message is.</div>
+        <input type="range" id="msg-opacity-input" min="0" max="1" step="0.05" value="0">
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Auto-Hide Chat</span>
+        <div class="setting-description">Fades the chat completely out when there is no activity.</div>
+        <input type="checkbox" id="auto-hide-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Auto-Hide Delay (Seconds)</span>
+        <div class="setting-description">How many seconds to wait before hiding the chat.</div>
+        <input type="number" id="auto-hide-delay-input" min="1" max="300" value="20" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Sync Deleted Messages</span>
+        <div class="setting-description">If turned on, when someone deletes a message in Discord, it will instantly vanish from the overlay too.</div>
+        <input type="checkbox" id="delete-messages-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Show Text Chat Overlay</span>
+        <div class="setting-description">Displays text chat messages and input box.</div>
+        <input type="checkbox" id="show-text-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Show Voice Chat Overlay</span>
+        <div class="setting-description">Displays connected voice channel members, speaking rings, and mute status.</div>
+        <input type="checkbox" id="show-voice-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Show Voice Event Notifications</span>
+        <div class="setting-description">Displays text alerts for joins, leaves, mutes, and deafens inside the Voice overlay.</div>
+        <input type="checkbox" id="show-voice-notifs-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Voice Member Sort Order</span>
+        <div class="setting-description">Who to prioritize at the top of the voice member list in large calls.</div>
+        <select id="voice-sort-input" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
+            <option value="friends">Friends First (Default)</option>
+            <option value="speaking">Currently Speaking First</option>
+            <option value="staff">Server Staff / High Roles First</option>
+            <option value="alphabetical">Alphabetical (A-Z)</option>
+        </select>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Display Monitor</span>
+        <div class="setting-description">Which screen to spawn the overlay on.</div>
+        <select id="display-input">
+            <!-- Populated by JS -->
+        </select>
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Screen Position</span>
+        <select id="position-input">
+            <option value="top-right">Top Right</option>
+            <option value="top-left">Top Left</option>
+            <option value="bottom-right">Bottom Right</option>
+            <option value="bottom-left">Bottom Left</option>
+        </select>
+    </div>
+    
+    <div class="setting-group">
+        <span class="setting-label">Toggle Visibility Hotkey</span>
+        <div class="setting-description">Keybind to completely hide/show the overlay. (Must use modifiers + exactly ONE normal key. E.g. Ctrl+Shift+H)</div>
+        <input type="text" id="visibility-key-input" placeholder="e.g. CommandOrControl+Shift+H">
+    </div>
+
+    <div class="setting-group">
+        <span class="setting-label">Toggle Typing Mode Hotkey</span>
+        <div class="setting-description">Keybind to start typing in the overlay. (Must use modifiers + exactly ONE normal key. E.g. Ctrl+Shift+Enter)</div>
+        <input type="text" id="typing-key-input" placeholder="e.g. CommandOrControl+Shift+Enter">
+    </div>
+
+    <button class="save-btn" id="save-btn">Save Settings</button>
+
+    <script src="./settings.js"></script>
+</body>
+</html>

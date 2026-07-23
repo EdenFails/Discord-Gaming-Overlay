@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Discord Gaming Overlay</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: transparent !important;
+            overflow: hidden;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .gaming-overlay-container {
+            position: relative;
+            padding: 10px;
+            height: fit-content;
+            max-height: 100vh;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            transition: opacity 0.5s ease-in-out;
+            color: white;
+            font-family: 'Inter', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .gaming-overlay-container.typing-active {
+            opacity: 1;
+        }
+
+        .gaming-overlay-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 15px;
+            overflow-y: auto;
+            max-height: calc(100vh - 90px); /* Leave room for input */
+            pointer-events: none;
+            scrollbar-width: none; /* Firefox */
+        }
+        .gaming-overlay-messages::-webkit-scrollbar {
+            display: none;
+        }
+
+        .gaming-overlay-message {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px black;
+            backdrop-filter: blur(2px);
+            word-wrap: break-word;
+            pointer-events: auto;
+        }
+
+        .gaming-overlay-author {
+            font-weight: bold;
+            margin-right: 6px;
+        }
+
+        .gaming-overlay-input-container {
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        .gaming-overlay-input {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .gaming-overlay-input:focus {
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        /* Custom Emoji support */
+        .emoji {
+            height: 22px;
+            vertical-align: bottom;
+            display: inline-block;
+        }
+
+        .gaming-overlay-attachment {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: block;
+            object-fit: cover;
+        }
+
+        .gaming-overlay-file {
+            background-color: #2b2d31;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #dbdee1;
+            display: inline-block;
+            border: 1px solid #1e1f22;
+        }
+
+        /* Voice Overlay Section */
+        #voice-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 15px;
+            background: transparent;
+        }
+
+        #voice-notifs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 80px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        #voice-notifs-container::-webkit-scrollbar { display: none; }
+
+        .voice-notif-item {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.4);
+            color: #b5bac1;
+            display: inline-block;
+            align-self: flex-start;
+        }
+
+        .voice-notif-item.join { color: #57f287; }
+        .voice-notif-item.leave { color: #ed4245; }
+        .voice-notif-item.mute { color: #fee75c; }
+        .voice-notif-item.force_mute { color: #eb459e; }
+        .voice-notif-item.deafen { color: #fee75c; }
+        .voice-notif-item.force_deafen { color: #eb459e; }
+
+        #voice-users-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        #voice-users-container::-webkit-scrollbar { display: none; }
+
+        .voice-user-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(2px);
+        }
+
+        .voice-avatar-wrapper {
+            position: relative;
+            width: 32px;
+            height: 32px;
+        }
+
+        .voice-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-sizing: border-box;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+            border: 2px solid transparent;
+        }
+
+        .voice-user-avatar.speaking {
+            border-color: #23a55a;
+            box-shadow: 0 0 8px #23a55a;
+        }
+
+        .voice-user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f2f3f5;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .voice-status-badges {
+            display: flex;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .voice-badge {
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            background: rgba(237, 66, 69, 0.2);
+            color: #ed4245;
+            border: 1px solid rgba(237, 66, 69, 0.4);
+        }
+
+        .voice-badge.force {
+            background: rgba(235, 69, 158, 0.2);
+            color: #eb459e;
+            border: 1px solid rgba(235, 69, 158, 0.4);
+        }
+
+        .voice-badge.live {
+            background: rgba(237, 66, 69, 0.3);
+            color: #ed4245;
+            border: 1px solid rgba(237, 66, 69, 0.6);
+            font-weight: bold;
+        }
+
+        .voice-badge.watching {
+            background: rgba(88, 101, 242, 0.35);
+            color: #7983f5;
+            border: 1px solid rgba(88, 101, 242, 0.6);
+            font-weight: bold;
+        }
+        
+        #waiting-status {
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="gaming-overlay-container" id="container">
+        
+        <!-- Text Chat Section -->
+        <div id="text-section" style="display: none;">
+            <div class="gaming-overlay-messages" id="messages-container"></div>
+            
+            <div class="gaming-overlay-input-container" id="input-container" style="display: none;">
+                <input type="text" class="gaming-overlay-input" id="chat-input" placeholder="Message... (Press Ctrl+Shift+Enter to close)">
+            </div>
+        </div>
+
+        <!-- Voice Chat Section -->
+        <div id="voice-section">
+            <div id="voice-notifs-container"></div>
+            <div id="voice-users-container"></div>
+        </div>
+
+    </div>
+
+    <script src="./renderer.js"></script>
+</body>
+</html>
