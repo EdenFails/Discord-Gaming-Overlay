@@ -1,6 +1,9 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+echo "Checking for updates..."
+git pull origin main 2>/dev/null
+
 if [ ! -d "node_modules" ]; then
     echo "First time setup: Installing dependencies..."
     npm install
