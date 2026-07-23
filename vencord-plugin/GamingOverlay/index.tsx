@@ -79,6 +79,9 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
             FluxDispatcher.subscribe("STREAM_DELETE", handleVoiceEvent);
             FluxDispatcher.subscribe("STREAM_WATCH", handleVoiceEvent);
             FluxDispatcher.subscribe("STREAM_CLOSE", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_USER_JOIN", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_USER_LEAVE", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_UPDATE_SELF", handleVoiceEvent);
             FluxDispatcher.subscribe("MEDIA_ENGINE_PERMISSION", handleVoiceEvent);
         }
 
@@ -294,17 +297,35 @@ function sendVoiceToOverlay() {
             try {
                 const myId = uStore ? uStore.getCurrentUser?.()?.id : null;
                 if (myId && uid !== myId && appStreamStore) {
-                    const myStream = appStreamStore.getCurrentUserActiveStream?.() || 
-                                     appStreamStore.getAnyStreamForUser?.(myId) || 
-                                     appStreamStore.getActiveStreamForUser?.(myId);
-                    if (myStream) {
-                        const streamKey = myStream.streamKey || `${myStream.guildId || "null"}:${myStream.channelId}:${myId}`;
-                        const viewers = appStreamStore.getViewerIds?.(streamKey) || 
-                                        appStreamStore.getViewerIds?.(myStream) || 
-                                        appStreamStore.getViewersForStream?.(streamKey) || [];
-                        if (Array.isArray(viewers) && (viewers.includes(uid) || viewers.includes(String(uid)))) {
-                            isWatchingYou = true;
+                    let myStream = appStreamStore.getCurrentUserActiveStream?.() || 
+                                   appStreamStore.getAnyStreamForUser?.(myId) || 
+                                   appStreamStore.getActiveStreamForUser?.(myId);
+                    
+                    if (!myStream) {
+                        const allAppStreams = appStreamStore.getAllApplicationStreams?.() || appStreamStore.getAllActiveStreams?.() || [];
+                        myStream = allAppStreams.find((s: any) => s && (s.ownerId === myId || s.userId === myId));
+                    }
+
+                    let viewers: any[] = [];
+
+                    if (myStream && typeof appStreamStore.getViewerIds === "function") {
+                        const vRes = appStreamStore.getViewerIds(myStream);
+                        if (Array.isArray(vRes)) viewers = vRes;
+                    }
+
+                    const state = typeof appStreamStore.getState === "function" ? appStreamStore.getState() : appStreamStore;
+                    const rtcStreams = state?.rtcStreams || appStreamStore?.rtcStreams || {};
+                    Object.keys(rtcStreams).forEach(key => {
+                        if (key.includes(String(myId))) {
+                            const rStream = rtcStreams[key];
+                            if (rStream && Array.isArray(rStream.viewerIds)) {
+                                viewers.push(...rStream.viewerIds);
+                            }
                         }
+                    });
+
+                    if (viewers.some(v => String(v) === String(uid))) {
+                        isWatchingYou = true;
                     }
                 }
             } catch (e) {}

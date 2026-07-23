@@ -308,7 +308,7 @@ function renderVoiceOverlay(data) {
         badgesDiv.className = 'voice-status-badges';
 
         if (user.isWatchingYou) {
-            badgesDiv.innerHTML += '<span class="voice-badge watching">👁 Watching</span>';
+            badgesDiv.innerHTML += '<span class="voice-badge watching" title="Watching your stream">👁</span>';
         }
         if (user.isLive) {
             badgesDiv.innerHTML += '<span class="voice-badge live">LIVE</span>';
