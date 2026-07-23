@@ -12,7 +12,8 @@ import {
     SelectedChannelStore,
     UserStore,
     RelationshipStore,
-    ApplicationStreamingStore
+    ApplicationStreamingStore,
+    ChannelRTCStore
 } from "@webpack/common";
 import { findByProps, findStore } from "@webpack";
 import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
@@ -73,6 +74,12 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
             FluxDispatcher.subscribe("MESSAGE_DELETE", handleMessageEvent);
             FluxDispatcher.subscribe("VOICE_STATE_UPDATES", handleVoiceEvent);
             FluxDispatcher.subscribe("SPEAKING", handleSpeakingEvent);
+            FluxDispatcher.subscribe("STREAM_CREATE", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_UPDATE", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_DELETE", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_WATCH", handleVoiceEvent);
+            FluxDispatcher.subscribe("STREAM_CLOSE", handleVoiceEvent);
+            FluxDispatcher.subscribe("MEDIA_ENGINE_PERMISSION", handleVoiceEvent);
         }
 
     } catch (e) {
@@ -260,20 +267,41 @@ function sendVoiceToOverlay() {
             } catch (e) {}
 
             const appStreamStore = ApplicationStreamingStore || findStore("ApplicationStreamingStore");
-            const isLive = Boolean(
-                vs.selfStream || 
-                vs.selfVideo || 
-                (appStreamStore && appStreamStore.getAnyStreamForUser?.(uid))
-            );
+            const rtcStore = ChannelRTCStore || findStore("ChannelRTCStore");
+
+            let isLive = Boolean(vs.selfStream || vs.selfVideo || vs.stream);
+            try {
+                if (!isLive && appStreamStore) {
+                    const anyStream = appStreamStore.getAnyStreamForUser?.(uid) || appStreamStore.getActiveStreamForUser?.(uid);
+                    if (anyStream) {
+                        isLive = true;
+                    } else if (vcId && typeof appStreamStore.getAllActiveStreamsForChannel === "function") {
+                        const channelStreams = appStreamStore.getAllActiveStreamsForChannel(vcId) || [];
+                        if (channelStreams.some((s: any) => s && (s.ownerId === uid || s.userId === uid))) {
+                            isLive = true;
+                        }
+                    }
+                }
+                if (!isLive && vcId && rtcStore && typeof rtcStore.getStreamParticipants === "function") {
+                    const streamParts = rtcStore.getStreamParticipants(vcId) || [];
+                    if (streamParts.some((p: any) => p && (p.id === uid || (p.user && p.user.id === uid)))) {
+                        isLive = true;
+                    }
+                }
+            } catch (e) {}
 
             let isWatchingYou = false;
             try {
                 const myId = uStore ? uStore.getCurrentUser?.()?.id : null;
                 if (myId && uid !== myId && appStreamStore) {
-                    const myStream = appStreamStore.getCurrentUserActiveStream?.() || appStreamStore.getAnyStreamForUser?.(myId);
+                    const myStream = appStreamStore.getCurrentUserActiveStream?.() || 
+                                     appStreamStore.getAnyStreamForUser?.(myId) || 
+                                     appStreamStore.getActiveStreamForUser?.(myId);
                     if (myStream) {
                         const streamKey = myStream.streamKey || `${myStream.guildId || "null"}:${myStream.channelId}:${myId}`;
-                        const viewers = appStreamStore.getViewerIds?.(streamKey) || appStreamStore.getViewerIds?.(myStream) || [];
+                        const viewers = appStreamStore.getViewerIds?.(streamKey) || 
+                                        appStreamStore.getViewerIds?.(myStream) || 
+                                        appStreamStore.getViewersForStream?.(streamKey) || [];
                         if (Array.isArray(viewers) && (viewers.includes(uid) || viewers.includes(String(uid)))) {
                             isWatchingYou = true;
                         }
