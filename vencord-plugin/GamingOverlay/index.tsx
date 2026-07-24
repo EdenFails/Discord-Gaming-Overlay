@@ -108,7 +108,7 @@ function sendMessagesToOverlay() {
 
         if (msgArray.length > 0) {
             const lastMsgs = msgArray.slice(-20)
-                .filter((m: any) => m && (m.content || (m.attachments && m.attachments.length > 0)))
+                .filter((m: any) => m && (m.content || (m.attachments && m.attachments.length > 0) || (m.embeds && m.embeds.length > 0)))
                 .map((m: any) => {
                     const author = m.author || {};
                     let memberColor = m.colorString;
@@ -132,12 +132,22 @@ function sendMessagesToOverlay() {
                             width: a.width,
                             height: a.height
                         })),
-                        embeds: (m.embeds || []).map((e: any) => ({
-                            type: e.type,
-                            url: e.url,
-                            image: e.image ? (e.image.proxyURL || e.image.url) : null,
-                            thumbnail: e.thumbnail ? (e.thumbnail.proxyURL || e.thumbnail.url) : null
-                        })),
+                        embeds: (m.embeds || []).map((e: any) => {
+                            let imgUrl = null;
+                            if (e.image) imgUrl = e.image.proxyURL || e.image.url || (typeof e.image === 'string' ? e.image : null);
+                            let thumbUrl = null;
+                            if (e.thumbnail) thumbUrl = e.thumbnail.proxyURL || e.thumbnail.url || (typeof e.thumbnail === 'string' ? e.thumbnail : null);
+                            let vidUrl = null;
+                            if (e.video) vidUrl = e.video.proxyURL || e.video.url || (typeof e.video === 'string' ? e.video : null);
+
+                            return {
+                                type: e.type,
+                                url: e.url,
+                                image: imgUrl,
+                                thumbnail: thumbUrl,
+                                video: vidUrl
+                            };
+                        }),
                         author: {
                             username: author.globalName || author.username || "System",
                             color: memberColor || '#ffffff'

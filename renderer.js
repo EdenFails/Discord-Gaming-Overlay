@@ -182,16 +182,24 @@ ipcRenderer.on('messages-update', (event, messages) => {
 
         let hasRenderedMedia = false;
 
+        console.log('[Overlay Media Debug] Inspecting message:', m.id, 'author:', m.author?.username, 'content:', m.content, 'attachments:', m.attachments, 'embeds:', m.embeds);
+
         if (m.attachments && m.attachments.length > 0) {
             m.attachments.forEach(a => {
                 const isImage = (a.content_type && a.content_type.startsWith('image/')) || 
-                                (a.filename && /\.(gif|png|jpe?g|webp)$/i.test(a.filename));
+                                (a.filename && /\.(gif|png|jpe?g|webp)$/i.test(a.filename)) ||
+                                (a.url && /\.(gif|png|jpe?g|webp)/i.test(a.url));
                 if (isImage) {
                     hasRenderedMedia = true;
+                    const mediaSrc = a.proxy_url || a.url;
+                    console.log('[Overlay Media Debug] Rendering attachment image/GIF:', mediaSrc);
                     const img = document.createElement('img');
-                    img.src = a.proxy_url || a.url;
+                    img.src = mediaSrc;
                     img.className = 'gaming-overlay-attachment';
-                    img.onerror = () => { img.remove(); };
+                    img.onerror = () => { 
+                        console.warn('[Overlay Media Debug] Image failed to load, removing:', mediaSrc);
+                        img.remove(); 
+                    };
                     img.onload = () => {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     };
@@ -207,33 +215,75 @@ ipcRenderer.on('messages-update', (event, messages) => {
 
         if (m.embeds && m.embeds.length > 0) {
             m.embeds.forEach(e => {
-                const imgUrl = e.image || e.thumbnail;
-                if (imgUrl) {
+                const mediaUrl = e.video || e.image || e.thumbnail || (e.url && /\.(gif|png|jpe?g|webp|mp4)/i.test(e.url) ? e.url : null);
+                if (mediaUrl) {
                     hasRenderedMedia = true;
-                    const img = document.createElement('img');
-                    img.src = imgUrl;
-                    img.className = 'gaming-overlay-attachment';
-                    img.onerror = () => { img.remove(); };
-                    img.onload = () => {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    };
-                    msgDiv.appendChild(img);
+                    console.log('[Overlay Media Debug] Rendering embed media:', mediaUrl);
+                    if (/\.(mp4|webm)/i.test(mediaUrl) || e.type === 'gifv' || e.video) {
+                        const vid = document.createElement('video');
+                        vid.src = mediaUrl;
+                        vid.autoplay = true;
+                        vid.loop = true;
+                        vid.muted = true;
+                        vid.setAttribute('playsinline', '');
+                        vid.className = 'gaming-overlay-attachment';
+                        vid.onerror = () => { 
+                            console.warn('[Overlay Media Debug] Video failed to load, removing:', mediaUrl);
+                            vid.remove(); 
+                        };
+                        vid.onloadeddata = () => {
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        };
+                        msgDiv.appendChild(vid);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = mediaUrl;
+                        img.className = 'gaming-overlay-attachment';
+                        img.onerror = () => { 
+                            console.warn('[Overlay Media Debug] Embed image failed to load, removing:', mediaUrl);
+                            img.remove(); 
+                        };
+                        img.onload = () => {
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        };
+                        msgDiv.appendChild(img);
+                    }
                 }
             });
         }
 
         if (!hasRenderedMedia && m.content) {
-            const directImgMatch = m.content.match(/https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp)/i);
+            const directImgMatch = m.content.match(/https?:\/\/[^\s]+?\.(?:gif|png|jpe?g|webp|mp4)(?:\?[^\s]*)?/i);
             if (directImgMatch && directImgMatch[0]) {
-                const imgUrl = directImgMatch[0];
-                const img = document.createElement('img');
-                img.src = imgUrl;
-                img.className = 'gaming-overlay-attachment';
-                img.onerror = () => { img.remove(); };
-                img.onload = () => {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                };
-                msgDiv.appendChild(img);
+                const mediaUrl = directImgMatch[0];
+                hasRenderedMedia = true;
+                console.log('[Overlay Media Debug] Rendering direct URL media:', mediaUrl);
+                if (/\.(mp4|webm)/i.test(mediaUrl)) {
+                    const vid = document.createElement('video');
+                    vid.src = mediaUrl;
+                    vid.autoplay = true;
+                    vid.loop = true;
+                    vid.muted = true;
+                    vid.setAttribute('playsinline', '');
+                    vid.className = 'gaming-overlay-attachment';
+                    vid.onerror = () => { vid.remove(); };
+                    vid.onloadeddata = () => {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    };
+                    msgDiv.appendChild(vid);
+                } else {
+                    const img = document.createElement('img');
+                    img.src = mediaUrl;
+                    img.className = 'gaming-overlay-attachment';
+                    img.onerror = () => { 
+                        console.warn('[Overlay Media Debug] Direct URL image failed to load, removing:', mediaUrl);
+                        img.remove(); 
+                    };
+                    img.onload = () => {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    };
+                    msgDiv.appendChild(img);
+                }
             }
         }
         
