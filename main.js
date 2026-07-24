@@ -317,17 +317,14 @@ function updateShortcuts() {
 
 function createTray() {
     const { nativeImage } = require('electron');
-    let icon;
-    try {
-        icon = nativeImage.createFromPath(process.execPath);
-        if (icon.isEmpty()) {
-            icon = nativeImage.createEmpty();
-        }
-    } catch (e) {
-        icon = nativeImage.createEmpty();
+    const iconPath = path.join(__dirname, 'icon.png');
+    let icon = nativeImage.createFromPath(iconPath);
+    if (icon.isEmpty()) {
+        try { icon = nativeImage.createFromPath(process.execPath); } catch(e) {}
     }
     
     tray = new Tray(icon);
+    tray.setToolTip('Discord Gaming Overlay (Click to open Settings)');
     
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Settings', click: () => createSettingsWindow() },
@@ -338,12 +335,9 @@ function createTray() {
         }}
     ]);
     
-    tray.setToolTip('Gaming Overlay');
     tray.setContextMenu(contextMenu);
-    
-    tray.on('double-click', () => {
-        createSettingsWindow();
-    });
+    tray.on('double-click', () => createSettingsWindow());
+    tray.on('click', () => createSettingsWindow());
 }
 
 // IPC Handlers

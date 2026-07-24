@@ -1,6 +1,6 @@
 # Discord Gaming Overlay
 
-A lightweight, customizable in-game overlay for Discord text chat and voice channels. Supports Windows, Linux, and macOS.
+A lightweight, customizable in-game overlay for Discord text chat and voice channels. Supports Windows fully. Linux and macOS are supported, but we are unable to confirm full functionality of all features.
 
 ## AI Attribution and Disclaimer
 
@@ -12,14 +12,25 @@ Discord Gaming Overlay is a standalone Electron desktop application that connect
 
 ## Key Features
 
-- Text Chat Overlay: Displays live messages, custom emojis, fake nitro emojis, image attachments, and GIF thumbnails without cluttered raw URLs.
-- Voice Chat Overlay: Shows active voice members, avatar icons, glowing green speaking rings, live streams (LIVE badge), and spectators watching your stream (eye icon).
-- Auto-Expand Voice Section: Automatically resizes the voice overlay frame to fit all connected call members down to the bottom of your screen.
-- Custom Height Controls: Manually set pixel max heights for text chat and voice chat sections.
-- Friends First Sorting: Prioritizes your Discord friends at the top of the voice list in large calls so they are never cut off.
-- Modular Panels: Toggle text chat or voice chat on or off independently.
-- Mouse Passthrough and Custom Hotkeys: Click straight through the overlay into your games without losing focus. F10 or Ctrl+Shift+H toggles visibility, while Ctrl+Shift+Enter enables interactive typing mode.
-- Cross Platform: Runs on Windows, Linux (Wayland and X11), and macOS.
+- **Auto-Monitor Voice Channels (Default ON)**: Automatically tracks and displays voice call members as soon as you join any voice channel in Discord.
+- **Text Chat Overlay**: Displays live messages, custom emojis, fake nitro emojis, image attachments, and looping GIF/MP4 previews while hiding cluttered raw URLs.
+- **Voice Chat Overlay**: Shows active voice members, avatar icons, glowing green speaking rings, live streams (`LIVE` badge), and spectators watching your stream (`👁` eye icon).
+- **Auto-Expand Voice Section**: Automatically resizes the voice overlay frame to fit all connected call members down to the bottom of your screen without cutoffs.
+- **Custom Height Controls**: Manually set pixel max heights for text chat and voice chat sections in Settings.
+- **Friends First Sorting**: Prioritizes your Discord friends at the top of the voice list in large calls so they are never cut off.
+- **Modular Panels**: Toggle text chat or voice chat on or off independently.
+- **Mouse Passthrough and Custom Hotkeys**: Click straight through the overlay into your games without losing focus. Hotkeys can be customized in Settings (`Ctrl+Shift+H` for visibility, `Ctrl+Shift+Enter` for interactive typing mode).
+- **System Tray Controls**: Click or double-click the purple controller icon in your System Tray to open Settings or exit.
+- **Platform Support**: Supports Windows fully. Linux and macOS are supported, but we are unable to confirm full functionality of all features.
+
+## Accessing Settings
+
+To open the Overlay Settings window:
+1. Look at your **System Tray** (bottom-right near your clock on Windows, or top/bottom bar on Linux/macOS).
+2. Click or double-click the purple **Discord Gaming Overlay** controller icon (`icon.png`).
+3. The Settings window will open, allowing you to configure opacity, auto-hide delay, max heights, auto-expansion, hotkeys, and display positions in real time!
+
+---
 
 ## Installation Guide
 
@@ -75,13 +86,13 @@ Both `start.bat` and `start.sh` automatically pull the latest changes from GitHu
 
 #### Linux Wayland & Hyprland Overlay Rendering Note
 If you are running Wayland (Hyprland, KDE Plasma 6, Sway, or CachyOS) and your game is covering the overlay in borderless mode:
-- The application now uses window type `toolbar`, Ozone auto-platform hints, and `screen-saver` stack priority to float above games.
-- **Hyprland users**: Add these lines to your `hyprland.conf` so Hyprland pins the overlay over all games:
+- The application uses `tooltip` window type and `pop-up-menu` level priority to float above games.
+- **Hyprland users**: Add these lines to your `hyprland.conf`:
   ```ini
   windowrulev2 = pin, title:(Discord Gaming Overlay)
   windowrulev2 = float, title:(Discord Gaming Overlay)
   ```
-- **KDE Plasma 6 users**: Right-click the overlay window -> More Actions -> Keep Above Others.
+- **KDE Plasma 6 users**: Create a Window Rule for title `Discord Gaming Overlay` -> Keep above -> Force -> Yes.
 
 ---
 
