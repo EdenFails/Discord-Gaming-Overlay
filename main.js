@@ -87,7 +87,8 @@ function createWindow() {
         targetDisplay, 
         store.get('position'), 
         store.get('textSectionHeight'), 
-        store.get('voiceSectionHeight')
+        store.get('voiceSectionHeight'),
+        store.get('autoExpandVoice')
     );
 
     const windowOptions = {
@@ -150,6 +151,17 @@ function createWindow() {
             autoExpandVoice: store.get('autoExpandVoice') || false
         });
         mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
+
+        // Apply saved window height bounds immediately on launch
+        const initDisplay = getSelectedDisplay(store.get('displayId'));
+        const initBounds = calculateWindowPosition(
+            initDisplay,
+            store.get('position'),
+            store.get('textSectionHeight'),
+            store.get('voiceSectionHeight'),
+            store.get('autoExpandVoice')
+        );
+        mainWindow.setBounds(initBounds);
     });
 }
 

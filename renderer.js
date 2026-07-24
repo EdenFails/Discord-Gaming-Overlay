@@ -14,7 +14,10 @@ let syncDeletedMessages = true;
 let sectionsConfig = {
     showTextSection: true,
     showVoiceSection: true,
-    showVoiceNotifs: true
+    showVoiceNotifs: true,
+    textSectionHeight: 140,
+    voiceSectionHeight: 250,
+    autoExpandVoice: false
 };
 
 let hasConnectedMessagesChannel = false;
