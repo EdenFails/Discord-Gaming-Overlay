@@ -2,6 +2,8 @@
 
 A lightweight, customizable in-game overlay for Discord text chat and voice channels. Supports Windows fully. Linux and macOS are supported, but we are unable to confirm full functionality of all features.
 
+![Discord Gaming Overlay Preview](./preview.png)
+
 ## AI Attribution and Disclaimer
 
 99% of this codebase, architecture, Vencord bridge, and feature implementation was generated through Gemini AI by Google DeepMind.
