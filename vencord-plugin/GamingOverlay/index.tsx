@@ -22,6 +22,8 @@ let activeChannelId: string | null = null;
 let activeVoiceChannelId: string | null = null;
 let autoMonitorVoiceSetting = true;
 let ws: WebSocket | null = null;
+let isConnecting = false;
+let lastConnectAttempt = 0;
 
 let previousVoiceStatesMap: Record<string, any> = {};
 let speakingUsersSet = new Set<string>();
@@ -33,15 +35,24 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
         return;
     }
 
+    if (isConnecting || (Date.now() - lastConnectAttempt < 3000)) {
+        return;
+    }
+
+    isConnecting = true;
+    lastConnectAttempt = Date.now();
+
     if (ws) {
-        ws.close();
+        try { ws.close(); } catch(e) {}
+        ws = null;
     }
 
     try {
         ws = new WebSocket("ws://127.0.0.1:6969");
         
         ws.onopen = () => {
-            showToast("Connected to Gaming Overlay App!", Toasts.Type.SUCCESS);
+            isConnecting = false;
+            console.log("[GamingOverlay Bridge] Connected to Overlay App");
             if (onOpenCallback) onOpenCallback();
             sendMessagesToOverlay();
             sendVoiceToOverlay();
@@ -65,12 +76,12 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
         };
 
         ws.onclose = () => {
-            showToast("Disconnected from Gaming Overlay App", Toasts.Type.FAILURE);
+            isConnecting = false;
             ws = null;
         };
 
         ws.onerror = () => {
-            showToast("Failed to connect to Gaming Overlay App. Is it running?", Toasts.Type.FAILURE);
+            isConnecting = false;
             ws = null;
         };
 
@@ -95,7 +106,8 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
         }
 
     } catch (e) {
-        showToast("Error connecting to Overlay App", Toasts.Type.FAILURE);
+        isConnecting = false;
+        ws = null;
     }
 }
 
@@ -215,7 +227,10 @@ function addVoiceLog(text: string, type: string) {
 }
 
 function sendVoiceToOverlay() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        ensureWebSocketConnected();
+        return;
+    }
 
     try {
         const vStore = VoiceStateStore || findStore("VoiceStateStore");
@@ -420,9 +435,11 @@ function handleMessageEvent() {
 }
 
 function handleVoiceEvent() {
-    setTimeout(() => {
-        sendVoiceToOverlay();
-    }, 100);
+    ensureWebSocketConnected(() => {
+        setTimeout(() => {
+            sendVoiceToOverlay();
+        }, 100);
+    });
 }
 
 function handleSpeakingEvent(data: any) {
@@ -477,6 +494,7 @@ export default definePlugin({
     description: "Acts as a data bridge to the standalone Gaming Overlay external app.",
     authors: [{ name: "Principal Software Engineer", id: 1n }],
     start() {
+        ensureWebSocketConnected();
         addContextMenuPatch("channel-context", (children, props) => {
             if (!props || !props.channel) return;
             
