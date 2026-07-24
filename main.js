@@ -5,7 +5,8 @@ const Store = require('./store');
 
 // Fix Linux Wayland color space errors when rendering GIFs/images
 if (process.platform === 'linux') {
-    app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement');
+    app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement,WaylandColorManager,ColorManagement,ColorManager');
+    app.commandLine.appendSwitch('force-color-profile', 'srgb');
 }
 
 const store = new Store({
@@ -45,10 +46,13 @@ function getSelectedDisplay(prefId) {
     return screen.getPrimaryDisplay();
 }
 
-function calculateWindowPosition(display, pos) {
+function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 250) {
     const bounds = display.bounds; // x, y, width, height
     const winWidth = 350;
-    const winHeight = 500;
+    
+    // Dynamically expand total window height based on custom section heights so nothing gets cut off
+    const totalRequired = (textHeight || 140) + (voiceHeight || 250) + 110;
+    const winHeight = Math.min(bounds.height - 40, Math.max(300, totalRequired));
     const padding = 20;
     
     let x = bounds.x;
@@ -71,7 +75,12 @@ function calculateWindowPosition(display, pos) {
 
 function createWindow() {
     const targetDisplay = getSelectedDisplay(store.get('displayId'));
-    const bounds = calculateWindowPosition(targetDisplay, store.get('position'));
+    const bounds = calculateWindowPosition(
+        targetDisplay, 
+        store.get('position'), 
+        store.get('textSectionHeight'), 
+        store.get('voiceSectionHeight')
+    );
 
     const windowOptions = {
         width: bounds.width,
@@ -351,7 +360,12 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
         const targetDisplay = getSelectedDisplay(newConfig.displayId);
-        const bounds = calculateWindowPosition(targetDisplay, newConfig.position);
+        const bounds = calculateWindowPosition(
+            targetDisplay, 
+            newConfig.position, 
+            newConfig.textSectionHeight, 
+            newConfig.voiceSectionHeight
+        );
         mainWindow.setBounds(bounds);
     }
 
@@ -377,7 +391,12 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
         const targetDisplay = getSelectedDisplay(previewConfig.displayId);
-        const bounds = calculateWindowPosition(targetDisplay, previewConfig.position);
+        const bounds = calculateWindowPosition(
+            targetDisplay, 
+            previewConfig.position, 
+            previewConfig.textSectionHeight, 
+            previewConfig.voiceSectionHeight
+        );
         mainWindow.setBounds(bounds);
     }
 });

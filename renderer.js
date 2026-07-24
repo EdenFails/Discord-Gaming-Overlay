@@ -191,6 +191,7 @@ ipcRenderer.on('messages-update', (event, messages) => {
                     const img = document.createElement('img');
                     img.src = a.proxy_url || a.url;
                     img.className = 'gaming-overlay-attachment';
+                    img.onerror = () => { img.remove(); };
                     img.onload = () => {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     };
@@ -212,6 +213,7 @@ ipcRenderer.on('messages-update', (event, messages) => {
                     const img = document.createElement('img');
                     img.src = imgUrl;
                     img.className = 'gaming-overlay-attachment';
+                    img.onerror = () => { img.remove(); };
                     img.onload = () => {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     };
@@ -221,18 +223,17 @@ ipcRenderer.on('messages-update', (event, messages) => {
         }
 
         if (!hasRenderedMedia && m.content) {
-            const gifMatch = m.content.match(/(https?:\/\/[^\s]+\.(?:gif|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/i);
-            if (gifMatch && gifMatch[0]) {
-                const gifUrl = gifMatch[0];
-                if (gifUrl.endsWith('.gif') || gifUrl.endsWith('.webp')) {
-                    const img = document.createElement('img');
-                    img.src = gifUrl;
-                    img.className = 'gaming-overlay-attachment';
-                    img.onload = () => {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    };
-                    msgDiv.appendChild(img);
-                }
+            const directImgMatch = m.content.match(/https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp)/i);
+            if (directImgMatch && directImgMatch[0]) {
+                const imgUrl = directImgMatch[0];
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.className = 'gaming-overlay-attachment';
+                img.onerror = () => { img.remove(); };
+                img.onload = () => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                };
+                msgDiv.appendChild(img);
             }
         }
         
