@@ -20,6 +20,7 @@ Discord Gaming Overlay is a standalone Electron desktop application that connect
 - **Friends First Sorting**: Prioritizes your Discord friends at the top of the voice list in large calls so they are never cut off.
 - **Modular Panels**: Toggle text chat or voice chat on or off independently.
 - **Mouse Passthrough and Custom Hotkeys**: Click straight through the overlay into your games without losing focus. Hotkeys can be customized in Settings (`Ctrl+Shift+H` for visibility, `Ctrl+Shift+Enter` for interactive typing mode).
+- **Automatic Plugin Sync**: Specify your Vencord `userplugins` folder path in Settings to automatically sync and update the Vencord plugin on startup!
 - **System Tray Controls**: Click or double-click the purple controller icon in your System Tray to open Settings or exit.
 - **Platform Support**: Supports Windows fully. Linux and macOS are supported, but we are unable to confirm full functionality of all features.
 
@@ -28,7 +29,7 @@ Discord Gaming Overlay is a standalone Electron desktop application that connect
 To open the Overlay Settings window:
 1. Look at your **System Tray** (bottom-right near your clock on Windows, or top/bottom bar on Linux/macOS).
 2. Click or double-click the purple **Discord Gaming Overlay** controller icon (`icon.png`).
-3. The Settings window will open, allowing you to configure opacity, auto-hide delay, max heights, auto-expansion, hotkeys, and display positions in real time!
+3. The Settings window will open, allowing you to configure opacity, auto-hide delay, max heights, auto-expansion, hotkeys, Vencord userplugins path, and display positions in real time!
 
 ---
 
@@ -51,7 +52,7 @@ pnpm install
 ```
 
 #### Step C: Copy the Gaming Overlay Plugin
-Copy the `vencord-plugin/GamingOverlay` directory from this repository into Vencord's `src/userplugins/` folder:
+Copy the `vencord-plugin/GamingOverlay` directory from this repository into Vencord's `src/userplugins/` folder (or set your `userplugins` folder path in the Overlay Settings to auto-sync!):
 ```text
 Vencord/
  └── src/
@@ -100,5 +101,6 @@ If you are running Wayland (Hyprland, KDE Plasma 6, Sway, or CachyOS) and your g
 
 Whenever new updates are pushed:
 1. Simply double-click `start.bat` or `start.sh` (auto-pulls latest changes).
-2. If the Vencord plugin file (`vencord-plugin/GamingOverlay/index.tsx`) was modified, copy it to your Vencord `src/userplugins/GamingOverlay/index.tsx`, run `pnpm build` in your Vencord directory, and restart Discord.
+2. **Automated Plugin Sync**: In the Overlay Settings, set your **Vencord Userplugins Path** (e.g. `C:\path\to\Vencord\src\userplugins`). The app will automatically copy and update the plugin files in your Vencord directory every time it launches!
+3. If the Vencord plugin code was updated, run `pnpm build` in your Vencord directory and restart Discord.
 
