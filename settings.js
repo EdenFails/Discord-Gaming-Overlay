@@ -10,6 +10,7 @@ const deleteMessagesInput = document.getElementById('delete-messages-input');
 const showTextSectionInput = document.getElementById('show-text-section-input');
 const showVoiceSectionInput = document.getElementById('show-voice-section-input');
 const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
+const autoMonitorVoiceInput = document.getElementById('auto-monitor-voice-input');
 const textHeightInput = document.getElementById('text-height-input');
 const voiceHeightInput = document.getElementById('voice-height-input');
 const autoExpandVoiceInput = document.getElementById('auto-expand-voice-input');
@@ -31,6 +32,7 @@ function sendLiveUpdate() {
         showTextSection: showTextSectionInput.checked,
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,
+        autoMonitorVoice: autoMonitorVoiceInput.checked,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,
@@ -68,6 +70,7 @@ deleteMessagesInput.addEventListener('change', sendLiveUpdate);
 showTextSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceNotifsInput.addEventListener('change', sendLiveUpdate);
+autoMonitorVoiceInput.addEventListener('change', sendLiveUpdate);
 textHeightInput.addEventListener('input', sendLiveUpdate);
 textHeightInput.addEventListener('change', sendLiveUpdate);
 voiceHeightInput.addEventListener('input', sendLiveUpdate);
@@ -127,6 +130,7 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     showTextSectionInput.checked = config.showTextSection !== false;
     showVoiceSectionInput.checked = config.showVoiceSection !== false;
     showVoiceNotifsInput.checked = config.showVoiceNotifs !== false;
+    autoMonitorVoiceInput.checked = config.autoMonitorVoice !== false;
     textHeightInput.value = config.textSectionHeight || 140;
     voiceHeightInput.value = config.voiceSectionHeight || 250;
     autoExpandVoiceInput.checked = Boolean(config.autoExpandVoice);
@@ -167,6 +171,7 @@ saveBtn.addEventListener('click', () => {
         showTextSection: showTextSectionInput.checked,
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,
+        autoMonitorVoice: autoMonitorVoiceInput.checked,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,

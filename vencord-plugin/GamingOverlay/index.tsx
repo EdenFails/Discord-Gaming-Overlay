@@ -20,6 +20,7 @@ import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
 
 let activeChannelId: string | null = null;
 let activeVoiceChannelId: string | null = null;
+let autoMonitorVoiceSetting = true;
 let ws: WebSocket | null = null;
 
 let previousVoiceStatesMap: Record<string, any> = {};
@@ -52,6 +53,11 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
                 const MessageActions = findByProps("sendMessage");
                 if (data.type === "SEND_MESSAGE" && data.content && activeChannelId && MessageActions) {
                     MessageActions.sendMessage(activeChannelId, { content: data.content });
+                } else if (data.type === "CONFIG_UPDATE") {
+                    if (typeof data.autoMonitorVoice === "boolean") {
+                        autoMonitorVoiceSetting = data.autoMonitorVoice;
+                        sendVoiceToOverlay();
+                    }
                 }
             } catch (e) {
                 console.error("Overlay Bridge WS Error:", e);
@@ -189,7 +195,8 @@ function sendVoiceToOverlay() {
         const rStore = RelationshipStore || findStore("RelationshipStore");
         const gmStore = GuildMemberStore || findStore("GuildMemberStore");
 
-        const vcId = activeVoiceChannelId || (sStore ? sStore.getVoiceChannelId() : null);
+        const connectedVoiceVcId = sStore ? sStore.getVoiceChannelId() : null;
+        const vcId = (autoMonitorVoiceSetting && connectedVoiceVcId) ? connectedVoiceVcId : (activeVoiceChannelId || connectedVoiceVcId);
         if (!vcId || !vStore) {
             ws.send(JSON.stringify({
                 type: "VOICE_UPDATE",

@@ -27,6 +27,7 @@ const store = new Store({
         textSectionHeight: 140,
         voiceSectionHeight: 250,
         autoExpandVoice: false,
+        autoMonitorVoice: true,
         displayId: null,
         position: 'top-right',
         visibilityKey: 'CommandOrControl+Shift+H',
@@ -359,6 +360,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('textSectionHeight', newConfig.textSectionHeight);
     store.set('voiceSectionHeight', newConfig.voiceSectionHeight);
     store.set('autoExpandVoice', newConfig.autoExpandVoice);
+    store.set('autoMonitorVoice', newConfig.autoMonitorVoice);
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -392,6 +394,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.setBounds(bounds);
     }
 
+    broadcastConfigToPlugin();
     updateShortcuts();
 });
 
@@ -423,6 +426,8 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         );
         mainWindow.setBounds(bounds);
     }
+
+    broadcastConfigToPlugin();
 });
 
 ipcMain.on('voice-user-count', (event, count) => {
@@ -466,10 +471,30 @@ ipcMain.on('send-message', (event, content) => {
     mainWindow.webContents.send('toggle-typing', false);
 });
 
+function broadcastConfigToPlugin() {
+    if (wss) {
+        const payload = JSON.stringify({
+            type: "CONFIG_UPDATE",
+            autoMonitorVoice: store.get('autoMonitorVoice') !== false
+        });
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(payload);
+            }
+        });
+    }
+}
+
 function startWebSocketServer() {
     wss = new WebSocket.Server({ port: 6969 });
 
     wss.on('connection', (ws) => {
+        // Send initial config to Vencord plugin on connection
+        ws.send(JSON.stringify({
+            type: "CONFIG_UPDATE",
+            autoMonitorVoice: store.get('autoMonitorVoice') !== false
+        }));
+
         ws.on('message', (message) => {
             try {
                 const data = JSON.parse(message);
