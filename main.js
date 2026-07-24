@@ -114,7 +114,7 @@ function createWindow() {
     };
 
     if (process.platform === 'linux') {
-        windowOptions.type = 'utility';
+        windowOptions.type = 'tooltip';
     }
 
     mainWindow = new BrowserWindow(windowOptions);
@@ -125,7 +125,7 @@ function createWindow() {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
     }
 
-    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    mainWindow.setAlwaysOnTop(true, 'pop-up-menu', 1);
     
     if (typeof mainWindow.setVisibleOnAllWorkspaces === 'function') {
         mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
