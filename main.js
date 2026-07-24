@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen, Menu, Tray } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const WebSocket = require('ws');
 const Store = require('./store');
 
