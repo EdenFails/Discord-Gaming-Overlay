@@ -47,18 +47,14 @@ function updateSectionsVisibility() {
         voiceNotifs.style.display = sectionsConfig.showVoiceNotifs ? 'flex' : 'none';
     }
 
-    if (showText && showVoice) {
-        // Both text and voice visible: use user's custom section height settings
-        const tHeight = sectionsConfig.textSectionHeight || 140;
-        const vHeight = sectionsConfig.voiceSectionHeight || 250;
-        if (messagesContainer) messagesContainer.style.maxHeight = `${tHeight}px`;
-        if (voiceUsersContainer) voiceUsersContainer.style.maxHeight = `${vHeight}px`;
-    } else if (showText) {
-        // Text only
-        if (messagesContainer) messagesContainer.style.maxHeight = 'calc(100vh - 40px)';
-    } else if (showVoice) {
-        // Voice only
-        if (voiceUsersContainer) voiceUsersContainer.style.maxHeight = 'calc(100vh - 80px)';
+    const tHeight = sectionsConfig.textSectionHeight || 140;
+    const vHeight = sectionsConfig.voiceSectionHeight || 250;
+    
+    if (messagesContainer) {
+        messagesContainer.style.maxHeight = `${tHeight}px`;
+    }
+    if (voiceUsersContainer) {
+        voiceUsersContainer.style.maxHeight = `${vHeight}px`;
     }
 }
 
