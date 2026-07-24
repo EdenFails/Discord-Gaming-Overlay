@@ -54,12 +54,12 @@ function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 2
     let effectiveVoiceHeight = voiceHeight || 250;
     if (autoExpandVoice) {
         const count = Math.max(1, voiceUserCount || 1);
-        const needed = count * 42 + 40;
-        const maxAvail = bounds.height - (textHeight || 140) - 100;
+        const needed = count * 50 + 24; // 50px per full voice card + header padding
+        const maxAvail = bounds.height - (textHeight || 140) - 90;
         effectiveVoiceHeight = Math.min(maxAvail, Math.max(120, needed));
     }
 
-    const totalRequired = (textHeight || 140) + effectiveVoiceHeight + 110;
+    const totalRequired = (textHeight || 140) + effectiveVoiceHeight + 130;
     const winHeight = Math.min(bounds.height - 40, Math.max(300, totalRequired));
     const padding = 20;
     
