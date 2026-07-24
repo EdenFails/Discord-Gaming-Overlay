@@ -317,9 +317,14 @@ function updateShortcuts() {
 
 function createTray() {
     const { nativeImage } = require('electron');
-    const iconPath = path.join(__dirname, 'icon.png');
+    let iconPath = path.join(__dirname, 'icon.png');
+    if (!fs.existsSync(iconPath)) {
+        iconPath = path.join(__dirname, 'icon.jpg');
+    }
     let icon = nativeImage.createFromPath(iconPath);
-    if (icon.isEmpty()) {
+    if (!icon.isEmpty()) {
+        icon = icon.resize({ width: 16, height: 16 });
+    } else {
         try { icon = nativeImage.createFromPath(process.execPath); } catch(e) {}
     }
     
