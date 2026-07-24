@@ -155,9 +155,17 @@ ipcRenderer.on('messages-update', (event, messages) => {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'gaming-overlay-message';
         
-        // Strip image/GIF/Tenor URLs from text line to keep messages compact
-        const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/gi;
-        const cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+        // Strip image/GIF/Tenor/Klipy/Giphy/Imgur URLs from text line to keep messages compact
+        const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp|mp4|webm))|(https?:\/\/(?:[a-z0-9-]+\.)?(?:tenor\.com|giphy\.com|klipy\.com|gfycat\.com|imgur\.com|streamable\.com)\/[^\s]+)/gi;
+        let cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+
+        if (m.embeds && m.embeds.length > 0) {
+            m.embeds.forEach(e => {
+                if (e.url) {
+                    cleanContent = cleanContent.replace(e.url, '').trim();
+                }
+            });
+        }
 
         if (cleanContent) {
             const authorSpan = document.createElement('span');
@@ -214,7 +222,10 @@ ipcRenderer.on('messages-update', (event, messages) => {
 
         if (m.embeds && m.embeds.length > 0) {
             m.embeds.forEach(e => {
-                const mediaUrl = e.video || e.image || e.thumbnail || (e.url && /\.(gif|png|jpe?g|webp|mp4)/i.test(e.url) ? e.url : null);
+                const mediaUrl = (typeof e.video === 'string' ? e.video : e.video?.url) || 
+                                 (typeof e.image === 'string' ? e.image : e.image?.url) || 
+                                 (typeof e.thumbnail === 'string' ? e.thumbnail : e.thumbnail?.url) || 
+                                 (e.url && /\.(gif|png|jpe?g|webp|mp4)/i.test(e.url) ? e.url : null);
                 if (mediaUrl) {
                     hasRenderedMedia = true;
                     console.log('[Overlay Media Debug] Rendering embed media:', mediaUrl);
