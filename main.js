@@ -7,8 +7,7 @@ const Store = require('./store');
 if (process.platform === 'linux') {
     app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement,WaylandColorManager,ColorManagement,ColorManager');
     app.commandLine.appendSwitch('force-color-profile', 'srgb');
-    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
-    app.commandLine.appendSwitch('ozone-platform', 'auto');
+    app.commandLine.appendSwitch('ozone-platform', 'x11');
 }
 
 const store = new Store({
@@ -113,7 +112,7 @@ function createWindow() {
     };
 
     if (process.platform === 'linux') {
-        windowOptions.type = 'toolbar';
+        windowOptions.type = 'utility';
     }
 
     mainWindow = new BrowserWindow(windowOptions);
@@ -124,7 +123,7 @@ function createWindow() {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
     }
 
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
     
     if (typeof mainWindow.setVisibleOnAllWorkspaces === 'function') {
         mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
