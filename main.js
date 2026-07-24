@@ -3,11 +3,13 @@ const path = require('path');
 const WebSocket = require('ws');
 const Store = require('./store');
 
-// Fix Linux Wayland color space errors and window layering when rendering above games
+// Disable hardware acceleration on Linux to prevent Mesa DRI GPU crashes (exit_code=139)
 if (process.platform === 'linux') {
+    app.disableHardwareAcceleration();
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
     app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement,WaylandColorManager,ColorManagement,ColorManager');
     app.commandLine.appendSwitch('force-color-profile', 'srgb');
-    app.commandLine.appendSwitch('ozone-platform', 'x11');
 }
 
 const store = new Store({

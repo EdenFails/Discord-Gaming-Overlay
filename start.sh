@@ -16,5 +16,5 @@ if [ -d "node_modules/electron/dist" ]; then
 fi
 
 echo "Starting Gaming Overlay..."
-export ELECTRON_OZONE_PLATFORM_HINT=x11
+export ELECTRON_OZONE_PLATFORM_HINT=auto
 npm start
