@@ -36,6 +36,22 @@ const store = new Store({
     }
 });
 
+function updateVencordPlugin() {
+    try {
+        const pluginPath = store.get('vencordPluginPath');
+        if (pluginPath && fs.existsSync(pluginPath)) {
+            const sourcePath = path.join(__dirname, 'vencord-plugin', 'GamingOverlay');
+            const destPath = path.join(pluginPath, 'GamingOverlay');
+            if (fs.existsSync(sourcePath)) {
+                fs.cpSync(sourcePath, destPath, { recursive: true, force: true });
+                console.log('Automatically updated Vencord plugin at', destPath);
+            }
+        }
+    } catch (err) {
+        console.error('Failed to auto-update Vencord plugin:', err);
+    }
+}
+
 let mainWindow;
 let settingsWindow;
 let tray = null;
@@ -394,6 +410,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.setBounds(bounds);
     }
 
+    updateVencordPlugin();
     broadcastConfigToPlugin();
     updateShortcuts();
 });
@@ -542,19 +559,7 @@ function startWebSocketServer() {
 }
 
 app.whenReady().then(() => {
-    try {
-        const pluginPath = store.get('vencordPluginPath');
-        if (pluginPath && fs.existsSync(pluginPath)) {
-            const sourcePath = path.join(__dirname, 'vencord-plugin', 'GamingOverlay');
-            const destPath = path.join(pluginPath, 'GamingOverlay');
-            if (fs.existsSync(sourcePath)) {
-                fs.cpSync(sourcePath, destPath, { recursive: true, force: true });
-                console.log('Automatically updated Vencord plugin at', destPath);
-            }
-        }
-    } catch (err) {
-        console.error('Failed to auto-update Vencord plugin:', err);
-    }
+    updateVencordPlugin();
 
     try {
         createTray();
