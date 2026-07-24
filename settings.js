@@ -22,28 +22,24 @@ const typingKeyInput = document.getElementById('typing-key-input');
 const vencordPluginPathInput = document.getElementById('vencord-plugin-path-input');
 const saveBtn = document.getElementById('save-btn');
 
-let liveUpdateTimer = null;
-// Send live preview updates (throttled for low CPU overhead)
+// Send live preview updates
 function sendLiveUpdate() {
-    if (liveUpdateTimer) cancelAnimationFrame(liveUpdateTimer);
-    liveUpdateTimer = requestAnimationFrame(() => {
-        ipcRenderer.send('preview-settings', {
-            opacity: parseFloat(opacityInput.value),
-            msgOpacity: parseFloat(msgOpacityInput.value),
-            autoHide: autoHideInput.checked,
-            autoHideDelay: parseInt(autoHideDelayInput.value),
-            deleteMessages: deleteMessagesInput.checked,
-            showTextSection: showTextSectionInput.checked,
-            showVoiceSection: showVoiceSectionInput.checked,
-            showVoiceNotifs: showVoiceNotifsInput.checked,
-            autoMonitorVoice: autoMonitorVoiceInput.checked,
-            textSectionHeight: parseInt(textHeightInput.value) || 140,
-            voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
-            autoExpandVoice: autoExpandVoiceInput.checked,
-            voiceSortOrder: voiceSortInput.value,
-            displayId: parseInt(displayInput.value),
-            position: positionInput.value
-        });
+    ipcRenderer.send('preview-settings', {
+        opacity: parseFloat(opacityInput.value),
+        msgOpacity: parseFloat(msgOpacityInput.value),
+        autoHide: autoHideInput.checked,
+        autoHideDelay: parseInt(autoHideDelayInput.value),
+        deleteMessages: deleteMessagesInput.checked,
+        showTextSection: showTextSectionInput.checked,
+        showVoiceSection: showVoiceSectionInput.checked,
+        showVoiceNotifs: showVoiceNotifsInput.checked,
+        autoMonitorVoice: autoMonitorVoiceInput.checked,
+        textSectionHeight: parseInt(textHeightInput.value) || 140,
+        voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
+        autoExpandVoice: autoExpandVoiceInput.checked,
+        voiceSortOrder: voiceSortInput.value,
+        displayId: parseInt(displayInput.value),
+        position: positionInput.value
     });
 }
 
