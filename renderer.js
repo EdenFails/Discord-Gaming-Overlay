@@ -23,7 +23,7 @@ let sectionsConfig = {
 let hasConnectedMessagesChannel = false;
 
 ipcRenderer.on('set-sections-config', (event, config) => {
-    sectionsConfig = config;
+    sectionsConfig = { ...sectionsConfig, ...config };
     updateSectionsVisibility();
 });
 

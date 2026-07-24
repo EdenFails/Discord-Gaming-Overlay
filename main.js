@@ -536,7 +536,10 @@ function startWebSocketServer() {
                         mainWindow.webContents.send('set-sections-config', {
                             showTextSection: store.get('showTextSection') !== false,
                             showVoiceSection: store.get('showVoiceSection') !== false,
-                            showVoiceNotifs: store.get('showVoiceNotifs') !== false
+                            showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+                            textSectionHeight: store.get('textSectionHeight') || 140,
+                            voiceSectionHeight: store.get('voiceSectionHeight') || 250,
+                            autoExpandVoice: store.get('autoExpandVoice') || false
                         });
                     }
                     if (settingsWindow) {
