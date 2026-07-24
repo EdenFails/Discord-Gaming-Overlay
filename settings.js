@@ -19,6 +19,7 @@ const displayInput = document.getElementById('display-input');
 const positionInput = document.getElementById('position-input');
 const visibilityKeyInput = document.getElementById('visibility-key-input');
 const typingKeyInput = document.getElementById('typing-key-input');
+const vencordPluginPathInput = document.getElementById('vencord-plugin-path-input');
 const saveBtn = document.getElementById('save-btn');
 
 // Send live preview updates
@@ -140,6 +141,9 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     positionInput.value = config.position;
     visibilityKeyInput.value = config.visibilityKey;
     typingKeyInput.value = config.typingKey;
+    if (vencordPluginPathInput) {
+        vencordPluginPathInput.value = config.vencordPluginPath || '';
+    }
     
     // Populate displays
     displayInput.innerHTML = '';
@@ -179,7 +183,8 @@ saveBtn.addEventListener('click', () => {
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
-        typingKey: typingKeyInput.value
+        typingKey: typingKeyInput.value,
+        vencordPluginPath: vencordPluginPathInput ? vencordPluginPathInput.value : ''
     };
     
     saveBtn.textContent = 'Saved!';

@@ -364,6 +364,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
     store.set('typingKey', newConfig.typingKey);
+    store.set('vencordPluginPath', newConfig.vencordPluginPath);
 
     if (mainWindow) {
         mainWindow.webContents.send('set-opacity', newConfig.opacity);
@@ -541,6 +542,20 @@ function startWebSocketServer() {
 }
 
 app.whenReady().then(() => {
+    try {
+        const pluginPath = store.get('vencordPluginPath');
+        if (pluginPath && fs.existsSync(pluginPath)) {
+            const sourcePath = path.join(__dirname, 'vencord-plugin', 'GamingOverlay');
+            const destPath = path.join(pluginPath, 'GamingOverlay');
+            if (fs.existsSync(sourcePath)) {
+                fs.cpSync(sourcePath, destPath, { recursive: true, force: true });
+                console.log('Automatically updated Vencord plugin at', destPath);
+            }
+        }
+    } catch (err) {
+        console.error('Failed to auto-update Vencord plugin:', err);
+    }
+
     try {
         createTray();
     } catch (e) {
