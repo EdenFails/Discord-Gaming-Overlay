@@ -2,7 +2,7 @@
 cd "$(dirname "$0")"
 
 echo "Checking for updates..."
-git pull origin main 2>/dev/null
+git pull origin main || (echo "Git pull failed, forcing sync..." && git fetch origin main && git reset --hard origin/main)
 
 if [ ! -d "node_modules" ]; then
     echo "First time setup: Installing dependencies..."
