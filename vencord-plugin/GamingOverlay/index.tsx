@@ -78,6 +78,9 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
             FluxDispatcher.subscribe("MESSAGE_CREATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_UPDATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_DELETE", handleMessageEvent);
+            FluxDispatcher.subscribe("VOICE_CHANNEL_SELECT", handleVoiceEvent);
+            FluxDispatcher.subscribe("RTC_CONNECTION_STATE", handleVoiceEvent);
+            FluxDispatcher.subscribe("CHANNEL_SELECT", handleVoiceEvent);
             FluxDispatcher.subscribe("VOICE_STATE_UPDATES", handleVoiceEvent);
             FluxDispatcher.subscribe("SPEAKING", handleSpeakingEvent);
             FluxDispatcher.subscribe("STREAM_CREATE", handleVoiceEvent);
@@ -94,6 +97,33 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
     } catch (e) {
         showToast("Error connecting to Overlay App", Toasts.Type.FAILURE);
     }
+}
+
+function getConnectedVoiceChannelId(): string | null {
+    try {
+        const sStore = SelectedChannelStore || findStore("SelectedChannelStore") || findByProps("getVoiceChannelId");
+        if (sStore && typeof sStore.getVoiceChannelId === "function") {
+            const vId = sStore.getVoiceChannelId();
+            if (vId) return vId;
+        }
+
+        const vStore = VoiceStateStore || findStore("VoiceStateStore") || findByProps("getVoiceStateForUser");
+        const uStore = UserStore || findStore("UserStore") || findByProps("getCurrentUser");
+        const myId = uStore?.getCurrentUser?.()?.id;
+        if (myId && vStore && typeof vStore.getVoiceStateForUser === "function") {
+            const myState = vStore.getVoiceStateForUser(myId);
+            if (myState && myState.channelId) return myState.channelId;
+        }
+
+        const fallbackStore = findByProps("getVoiceChannelId", "getChannelId");
+        if (fallbackStore && typeof fallbackStore.getVoiceChannelId === "function") {
+            const vId = fallbackStore.getVoiceChannelId();
+            if (vId) return vId;
+        }
+    } catch (e) {
+        console.error("Error in getConnectedVoiceChannelId:", e);
+    }
+    return null;
 }
 
 function sendMessagesToOverlay() {
@@ -195,8 +225,8 @@ function sendVoiceToOverlay() {
         const rStore = RelationshipStore || findStore("RelationshipStore");
         const gmStore = GuildMemberStore || findStore("GuildMemberStore");
 
-        const connectedVoiceVcId = sStore ? sStore.getVoiceChannelId() : null;
-        const vcId = (autoMonitorVoiceSetting && connectedVoiceVcId) ? connectedVoiceVcId : (activeVoiceChannelId || connectedVoiceVcId);
+        const connectedVoiceVcId = getConnectedVoiceChannelId();
+        const vcId = autoMonitorVoiceSetting ? (connectedVoiceVcId || activeVoiceChannelId) : (activeVoiceChannelId || connectedVoiceVcId);
         if (!vcId || !vStore) {
             ws.send(JSON.stringify({
                 type: "VOICE_UPDATE",
@@ -207,6 +237,8 @@ function sendVoiceToOverlay() {
             previousVoiceStatesMap = {};
             return;
         }
+
+        ws.send(JSON.stringify({ type: "ENABLE_SECTION", section: "voice" }));
 
         const channel = cStore ? cStore.getChannel(vcId) : null;
         const guildId = channel ? channel.guild_id : null;
