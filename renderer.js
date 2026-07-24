@@ -270,6 +270,9 @@ ipcRenderer.on('set-voice-sort', (event, sortOrder) => {
 ipcRenderer.on('voice-update', (event, data) => {
     lastVoiceData = data;
     renderVoiceOverlay(data);
+    if (data && Array.isArray(data.users)) {
+        ipcRenderer.send('voice-user-count', data.users.length);
+    }
     resetHideTimer();
 });
 

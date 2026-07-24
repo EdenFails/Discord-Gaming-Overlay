@@ -12,6 +12,7 @@ const showVoiceSectionInput = document.getElementById('show-voice-section-input'
 const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
 const textHeightInput = document.getElementById('text-height-input');
 const voiceHeightInput = document.getElementById('voice-height-input');
+const autoExpandVoiceInput = document.getElementById('auto-expand-voice-input');
 const voiceSortInput = document.getElementById('voice-sort-input');
 const displayInput = document.getElementById('display-input');
 const positionInput = document.getElementById('position-input');
@@ -32,6 +33,7 @@ function sendLiveUpdate() {
         showVoiceNotifs: showVoiceNotifsInput.checked,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
+        autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
         displayId: parseInt(displayInput.value),
         position: positionInput.value
@@ -46,6 +48,16 @@ opacityInput.addEventListener('input', () => {
 
 msgOpacityInput.addEventListener('input', () => {
     msgOpacityVal.textContent = Math.round(msgOpacityInput.value * 100) + '%';
+    sendLiveUpdate();
+});
+
+function updateVoiceHeightDisabledState() {
+    voiceHeightInput.disabled = autoExpandVoiceInput.checked;
+    voiceHeightInput.style.opacity = autoExpandVoiceInput.checked ? '0.4' : '1';
+}
+
+autoExpandVoiceInput.addEventListener('change', () => {
+    updateVoiceHeightDisabledState();
     sendLiveUpdate();
 });
 
@@ -117,6 +129,8 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     showVoiceNotifsInput.checked = config.showVoiceNotifs !== false;
     textHeightInput.value = config.textSectionHeight || 140;
     voiceHeightInput.value = config.voiceSectionHeight || 250;
+    autoExpandVoiceInput.checked = Boolean(config.autoExpandVoice);
+    updateVoiceHeightDisabledState();
     voiceSortInput.value = config.voiceSortOrder || 'friends';
 
     positionInput.value = config.position;
@@ -155,6 +169,7 @@ saveBtn.addEventListener('click', () => {
         showVoiceNotifs: showVoiceNotifsInput.checked,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
+        autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
         displayId: parseInt(displayInput.value),
         position: positionInput.value,

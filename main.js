@@ -23,6 +23,7 @@ const store = new Store({
         voiceSortOrder: 'friends',
         textSectionHeight: 140,
         voiceSectionHeight: 250,
+        autoExpandVoice: false,
         displayId: null,
         position: 'top-right',
         visibilityKey: 'CommandOrControl+Shift+H',
@@ -46,12 +47,19 @@ function getSelectedDisplay(prefId) {
     return screen.getPrimaryDisplay();
 }
 
-function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 250) {
+function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 250, autoExpandVoice = false, voiceUserCount = 0) {
     const bounds = display.bounds; // x, y, width, height
     const winWidth = 350;
     
-    // Dynamically expand total window height based on custom section heights so nothing gets cut off
-    const totalRequired = (textHeight || 140) + (voiceHeight || 250) + 110;
+    let effectiveVoiceHeight = voiceHeight || 250;
+    if (autoExpandVoice) {
+        const count = Math.max(1, voiceUserCount || 1);
+        const needed = count * 42 + 40;
+        const maxAvail = bounds.height - (textHeight || 140) - 100;
+        effectiveVoiceHeight = Math.min(maxAvail, Math.max(120, needed));
+    }
+
+    const totalRequired = (textHeight || 140) + effectiveVoiceHeight + 110;
     const winHeight = Math.min(bounds.height - 40, Math.max(300, totalRequired));
     const padding = 20;
     
@@ -70,7 +78,7 @@ function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 2
         y += padding;
     }
     
-    return { x, y, width: winWidth, height: winHeight };
+    return { x, y, width: winWidth, height: winHeight, effectiveVoiceHeight };
 }
 
 function createWindow() {
@@ -138,7 +146,8 @@ function createWindow() {
             showVoiceSection: store.get('showVoiceSection') !== false,
             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
             textSectionHeight: store.get('textSectionHeight') || 140,
-            voiceSectionHeight: store.get('voiceSectionHeight') || 250
+            voiceSectionHeight: store.get('voiceSectionHeight') || 250,
+            autoExpandVoice: store.get('autoExpandVoice') || false
         });
         mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
     });
@@ -337,6 +346,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('voiceSortOrder', newConfig.voiceSortOrder);
     store.set('textSectionHeight', newConfig.textSectionHeight);
     store.set('voiceSectionHeight', newConfig.voiceSectionHeight);
+    store.set('autoExpandVoice', newConfig.autoExpandVoice);
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -355,7 +365,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
             showVoiceSection: newConfig.showVoiceSection,
             showVoiceNotifs: newConfig.showVoiceNotifs,
             textSectionHeight: newConfig.textSectionHeight || 140,
-            voiceSectionHeight: newConfig.voiceSectionHeight || 250
+            voiceSectionHeight: newConfig.voiceSectionHeight || 250,
+            autoExpandVoice: newConfig.autoExpandVoice || false
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
@@ -386,7 +397,8 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             showVoiceSection: previewConfig.showVoiceSection,
             showVoiceNotifs: previewConfig.showVoiceNotifs,
             textSectionHeight: previewConfig.textSectionHeight || 140,
-            voiceSectionHeight: previewConfig.voiceSectionHeight || 250
+            voiceSectionHeight: previewConfig.voiceSectionHeight || 250,
+            autoExpandVoice: previewConfig.autoExpandVoice || false
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
@@ -398,6 +410,29 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             previewConfig.voiceSectionHeight
         );
         mainWindow.setBounds(bounds);
+    }
+});
+
+ipcMain.on('voice-user-count', (event, count) => {
+    if (mainWindow && store.get('autoExpandVoice')) {
+        const targetDisplay = getSelectedDisplay(store.get('displayId'));
+        const bounds = calculateWindowPosition(
+            targetDisplay,
+            store.get('position'),
+            store.get('textSectionHeight'),
+            store.get('voiceSectionHeight'),
+            true,
+            count
+        );
+        mainWindow.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
+        mainWindow.webContents.send('set-sections-config', {
+            showTextSection: store.get('showTextSection') !== false,
+            showVoiceSection: store.get('showVoiceSection') !== false,
+            showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+            textSectionHeight: store.get('textSectionHeight') || 140,
+            voiceSectionHeight: bounds.effectiveVoiceHeight,
+            autoExpandVoice: true
+        });
     }
 });
 
