@@ -315,16 +315,17 @@ ipcRenderer.on('set-voice-sort', (event, sortOrder) => {
     }
 });
 
-let lastVoiceUserCount = -1;
+let lastUserCount = -1;
 
 // Voice Overlay rendering
 ipcRenderer.on('voice-update', (event, data) => {
     lastVoiceData = data;
     renderVoiceOverlay(data);
     if (data && Array.isArray(data.users)) {
-        if (data.users.length !== lastVoiceUserCount) {
-            lastVoiceUserCount = data.users.length;
-            ipcRenderer.send('voice-user-count', data.users.length);
+        const currentCount = data.users.length;
+        if (currentCount !== lastUserCount) {
+            lastUserCount = currentCount;
+            ipcRenderer.send('voice-user-count', currentCount);
         }
     }
     resetHideTimer();

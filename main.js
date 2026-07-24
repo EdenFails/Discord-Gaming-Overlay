@@ -102,14 +102,6 @@ function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 2
     return { x, y, width: winWidth, height: winHeight, effectiveVoiceHeight };
 }
 
-function setWindowBoundsIfChanged(win, newBounds) {
-    if (!win) return;
-    const cur = win.getBounds();
-    if (cur.x !== newBounds.x || cur.y !== newBounds.y || cur.width !== newBounds.width || cur.height !== newBounds.height) {
-        win.setBounds(newBounds);
-    }
-}
-
 function createWindow() {
     const targetDisplay = getSelectedDisplay(store.get('displayId'));
     const bounds = calculateWindowPosition(
@@ -177,6 +169,17 @@ function createWindow() {
             autoExpandVoice: store.get('autoExpandVoice') || false
         });
         mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
+
+        // Apply saved window height bounds immediately on launch
+        const initDisplay = getSelectedDisplay(store.get('displayId'));
+        const initBounds = calculateWindowPosition(
+            initDisplay,
+            store.get('position'),
+            store.get('textSectionHeight'),
+            store.get('voiceSectionHeight'),
+            store.get('autoExpandVoice')
+        );
+        mainWindow.setBounds(initBounds);
     });
 }
 
@@ -397,7 +400,14 @@ ipcMain.on('save-settings', (event, newConfig) => {
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
-        setWindowBoundsIfChanged(mainWindow, bounds);
+        const targetDisplay = getSelectedDisplay(newConfig.displayId);
+        const bounds = calculateWindowPosition(
+            targetDisplay, 
+            newConfig.position, 
+            newConfig.textSectionHeight, 
+            newConfig.voiceSectionHeight
+        );
+        mainWindow.setBounds(bounds);
     }
 
     updateVencordPlugin();
@@ -424,7 +434,14 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
-        setWindowBoundsIfChanged(mainWindow, bounds);
+        const targetDisplay = getSelectedDisplay(previewConfig.displayId);
+        const bounds = calculateWindowPosition(
+            targetDisplay, 
+            previewConfig.position, 
+            previewConfig.textSectionHeight, 
+            previewConfig.voiceSectionHeight
+        );
+        mainWindow.setBounds(bounds);
     }
 
     broadcastConfigToPlugin();
@@ -441,19 +458,18 @@ ipcMain.on('voice-user-count', (event, count) => {
             true,
             count
         );
-        const newRect = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-        const cur = mainWindow.getBounds();
-        if (cur.x !== newRect.x || cur.y !== newRect.y || cur.width !== newRect.width || cur.height !== newRect.height) {
-            mainWindow.setBounds(newRect);
-            mainWindow.webContents.send('set-sections-config', {
-                showTextSection: store.get('showTextSection') !== false,
-                showVoiceSection: store.get('showVoiceSection') !== false,
-                showVoiceNotifs: store.get('showVoiceNotifs') !== false,
-                textSectionHeight: store.get('textSectionHeight') || 140,
-                voiceSectionHeight: bounds.effectiveVoiceHeight,
-                autoExpandVoice: true
-            });
+        const curr = mainWindow.getBounds();
+        if (curr.x !== bounds.x || curr.y !== bounds.y || curr.width !== bounds.width || curr.height !== bounds.height) {
+            mainWindow.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
         }
+        mainWindow.webContents.send('set-sections-config', {
+            showTextSection: store.get('showTextSection') !== false,
+            showVoiceSection: store.get('showVoiceSection') !== false,
+            showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+            textSectionHeight: store.get('textSectionHeight') || 140,
+            voiceSectionHeight: bounds.effectiveVoiceHeight,
+            autoExpandVoice: true
+        });
     }
 });
 
