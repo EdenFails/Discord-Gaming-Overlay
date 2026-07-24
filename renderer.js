@@ -407,8 +407,7 @@ function renderVoiceOverlay(data) {
     });
 
     sortedUsers.forEach((user, index) => {
-        const uId = String(user.userId || user.id || '');
-        let card = uId ? existingCards.get(uId) : null;
+        let card = existingCards.get(user.id);
         
         let badgesHtml = '';
         if (user.isWatchingYou) badgesHtml += '<span class="voice-badge watching" title="Watching your stream">👁</span>';
@@ -419,7 +418,7 @@ function renderVoiceOverlay(data) {
         else if (user.isMuted) badgesHtml += '<span class="voice-badge">Muted</span>';
 
         if (card) {
-            if (uId) existingCards.delete(uId);
+            existingCards.delete(user.id);
 
             // In-place update speaking ring
             const avatarImg = card.querySelector('.voice-user-avatar');
@@ -444,7 +443,7 @@ function renderVoiceOverlay(data) {
             // Create new card
             card = document.createElement('div');
             card.className = 'voice-user-card';
-            if (uId) card.dataset.userId = uId;
+            card.dataset.userId = user.id;
 
             const avatarWrapper = document.createElement('div');
             avatarWrapper.className = 'voice-avatar-wrapper';
