@@ -3,10 +3,12 @@ const path = require('path');
 const WebSocket = require('ws');
 const Store = require('./store');
 
-// Fix Linux Wayland color space errors when rendering GIFs/images
+// Fix Linux Wayland color space errors and window layering when rendering above games
 if (process.platform === 'linux') {
     app.commandLine.appendSwitch('disable-features', 'WaylandColorManagement,WaylandColorManager,ColorManagement,ColorManager');
     app.commandLine.appendSwitch('force-color-profile', 'srgb');
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
+    app.commandLine.appendSwitch('ozone-platform', 'auto');
 }
 
 const store = new Store({
@@ -92,6 +94,7 @@ function createWindow() {
     );
 
     const windowOptions = {
+        title: 'Discord Gaming Overlay',
         width: bounds.width,
         height: bounds.height,
         x: bounds.x,
@@ -110,7 +113,7 @@ function createWindow() {
     };
 
     if (process.platform === 'linux') {
-        windowOptions.type = 'notification';
+        windowOptions.type = 'toolbar';
     }
 
     mainWindow = new BrowserWindow(windowOptions);
@@ -121,11 +124,7 @@ function createWindow() {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
     }
 
-    if (process.platform === 'win32') {
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    } else {
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    }
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
     
     if (typeof mainWindow.setVisibleOnAllWorkspaces === 'function') {
         mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });

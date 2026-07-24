@@ -73,6 +73,16 @@ Once Vencord is patched and Discord is running:
 
 Both `start.bat` and `start.sh` automatically pull the latest changes from GitHub on launch before opening the overlay.
 
+#### Linux Wayland & Hyprland Overlay Rendering Note
+If you are running Wayland (Hyprland, KDE Plasma 6, Sway, or CachyOS) and your game is covering the overlay in borderless mode:
+- The application now uses window type `toolbar`, Ozone auto-platform hints, and `screen-saver` stack priority to float above games.
+- **Hyprland users**: Add these lines to your `hyprland.conf` so Hyprland pins the overlay over all games:
+  ```ini
+  windowrulev2 = pin, title:(Discord Gaming Overlay)
+  windowrulev2 = float, title:(Discord Gaming Overlay)
+  ```
+- **KDE Plasma 6 users**: Right-click the overlay window -> More Actions -> Keep Above Others.
+
 ---
 
 ## Updating
