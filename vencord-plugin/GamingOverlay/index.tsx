@@ -28,6 +28,7 @@ let lastConnectAttempt = 0;
 let previousVoiceStatesMap: Record<string, any> = {};
 let speakingUsersSet = new Set<string>();
 let eventLogList: Array<{ id: string; text: string; type: string; timestamp: number }> = [];
+let lastVoicePayloadStr = "";
 
 function ensureWebSocketConnected(onOpenCallback?: () => void) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -416,12 +417,17 @@ function sendVoiceToOverlay() {
             };
         });
 
-        ws.send(JSON.stringify({
+        const payloadObj = {
             type: "VOICE_UPDATE",
             voiceChannelName: channelName,
             users: userList,
             eventLogs: eventLogList
-        }));
+        };
+        const payloadStr = JSON.stringify(payloadObj);
+        if (payloadStr !== lastVoicePayloadStr) {
+            lastVoicePayloadStr = payloadStr;
+            ws.send(payloadStr);
+        }
 
     } catch (e) {
         console.error("Error in sendVoiceToOverlay:", e);

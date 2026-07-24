@@ -129,135 +129,75 @@ ipcRenderer.on('toggle-typing', (event, typingMode) => {
     resetHideTimer();
 });
 
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 let lastMessagesJson = '';
 
-ipcRenderer.on('messages-update', (event, messages) => {
-    if (syncDeletedMessages && messages) {
-        messages = messages.filter(m => m.state !== 'DELETED');
-    }
-
-    if (!messages || messages.length === 0) {
-        hasConnectedMessagesChannel = false;
-        updateSectionsVisibility();
-        return;
-    }
-
-    hasConnectedMessagesChannel = true;
-    updateSectionsVisibility();
-
-    const currentJson = JSON.stringify(messages);
-    if (currentJson === lastMessagesJson) return;
-    lastMessagesJson = currentJson;
+function createMessageElement(m) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'gaming-overlay-message';
+    msgDiv.dataset.msgId = m.id;
     
-    messagesContainer.innerHTML = '';
-    
-    messages.forEach(m => {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'gaming-overlay-message';
+    // Strip image/GIF/Tenor URLs from text line to keep messages compact
+    const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/gi;
+    const cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+
+    if (cleanContent) {
+        const authorSpan = document.createElement('span');
+        authorSpan.className = 'gaming-overlay-author';
+        authorSpan.style.color = m.author.color;
+        authorSpan.textContent = m.author.username + ': ';
         
-        // Strip image/GIF/Tenor URLs from text line to keep messages compact
-        const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp))|(https?:\/\/(?:media\.)?tenor\.com\/[^\s]+)|(https?:\/\/(?:media\.)?giphy\.com\/[^\s]+)/gi;
-        const cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'gaming-overlay-content';
+        contentSpan.innerHTML = parseCustomEmojis(cleanContent);
+        
+        msgDiv.appendChild(authorSpan);
+        msgDiv.appendChild(contentSpan);
+    } else {
+        const authorSpan = document.createElement('span');
+        authorSpan.className = 'gaming-overlay-author';
+        authorSpan.style.color = m.author.color;
+        authorSpan.textContent = m.author.username + ':';
+        msgDiv.appendChild(authorSpan);
+    }
 
-        if (cleanContent) {
-            const authorSpan = document.createElement('span');
-            authorSpan.className = 'gaming-overlay-author';
-            authorSpan.style.color = m.author.color;
-            authorSpan.textContent = m.author.username + ': ';
-            
-            const contentSpan = document.createElement('span');
-            contentSpan.className = 'gaming-overlay-content';
-            contentSpan.innerHTML = parseCustomEmojis(cleanContent);
-            
-            msgDiv.appendChild(authorSpan);
-            msgDiv.appendChild(contentSpan);
-        } else {
-            const authorSpan = document.createElement('span');
-            authorSpan.className = 'gaming-overlay-author';
-            authorSpan.style.color = m.author.color;
-            authorSpan.textContent = m.author.username + ':';
-            msgDiv.appendChild(authorSpan);
-        }
+    let hasRenderedMedia = false;
 
-        let hasRenderedMedia = false;
-
-        console.log('[Overlay Media Debug] Inspecting message:', m.id, 'author:', m.author?.username, 'content:', m.content, 'attachments:', m.attachments, 'embeds:', m.embeds);
-
-        if (m.attachments && m.attachments.length > 0) {
-            m.attachments.forEach(a => {
-                const isImage = (a.content_type && a.content_type.startsWith('image/')) || 
-                                (a.filename && /\.(gif|png|jpe?g|webp)$/i.test(a.filename)) ||
-                                (a.url && /\.(gif|png|jpe?g|webp)/i.test(a.url));
-                if (isImage) {
-                    hasRenderedMedia = true;
-                    const mediaSrc = a.proxy_url || a.url;
-                    console.log('[Overlay Media Debug] Rendering attachment image/GIF:', mediaSrc);
-                    const img = document.createElement('img');
-                    img.src = mediaSrc;
-                    img.className = 'gaming-overlay-attachment';
-                    img.onerror = () => { 
-                        console.warn('[Overlay Media Debug] Image failed to load, removing:', mediaSrc);
-                        img.remove(); 
-                    };
-                    img.onload = () => {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    };
-                    msgDiv.appendChild(img);
-                } else {
-                    const fileDiv = document.createElement('div');
-                    fileDiv.className = 'gaming-overlay-file';
-                    fileDiv.textContent = a.filename || 'Unknown File';
-                    msgDiv.appendChild(fileDiv);
-                }
-            });
-        }
-
-        if (m.embeds && m.embeds.length > 0) {
-            m.embeds.forEach(e => {
-                const mediaUrl = e.video || e.image || e.thumbnail || (e.url && /\.(gif|png|jpe?g|webp|mp4)/i.test(e.url) ? e.url : null);
-                if (mediaUrl) {
-                    hasRenderedMedia = true;
-                    console.log('[Overlay Media Debug] Rendering embed media:', mediaUrl);
-                    if (/\.(mp4|webm)/i.test(mediaUrl) || e.type === 'gifv' || e.video) {
-                        const vid = document.createElement('video');
-                        vid.src = mediaUrl;
-                        vid.autoplay = true;
-                        vid.loop = true;
-                        vid.muted = true;
-                        vid.setAttribute('playsinline', '');
-                        vid.className = 'gaming-overlay-attachment';
-                        vid.onerror = () => { 
-                            console.warn('[Overlay Media Debug] Video failed to load, removing:', mediaUrl);
-                            vid.remove(); 
-                        };
-                        vid.onloadeddata = () => {
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        };
-                        msgDiv.appendChild(vid);
-                    } else {
-                        const img = document.createElement('img');
-                        img.src = mediaUrl;
-                        img.className = 'gaming-overlay-attachment';
-                        img.onerror = () => { 
-                            console.warn('[Overlay Media Debug] Embed image failed to load, removing:', mediaUrl);
-                            img.remove(); 
-                        };
-                        img.onload = () => {
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        };
-                        msgDiv.appendChild(img);
-                    }
-                }
-            });
-        }
-
-        if (!hasRenderedMedia && m.content) {
-            const directImgMatch = m.content.match(/https?:\/\/[^\s]+?\.(?:gif|png|jpe?g|webp|mp4)(?:\?[^\s]*)?/i);
-            if (directImgMatch && directImgMatch[0]) {
-                const mediaUrl = directImgMatch[0];
+    if (m.attachments && m.attachments.length > 0) {
+        m.attachments.forEach(a => {
+            const isImage = (a.content_type && a.content_type.startsWith('image/')) || 
+                            (a.filename && /\.(gif|png|jpe?g|webp)$/i.test(a.filename)) ||
+                            (a.url && /\.(gif|png|jpe?g|webp)/i.test(a.url));
+            if (isImage) {
                 hasRenderedMedia = true;
-                console.log('[Overlay Media Debug] Rendering direct URL media:', mediaUrl);
-                if (/\.(mp4|webm)/i.test(mediaUrl)) {
+                const mediaSrc = a.proxy_url || a.url;
+                const img = document.createElement('img');
+                img.src = mediaSrc;
+                img.className = 'gaming-overlay-attachment';
+                img.onerror = () => { img.remove(); };
+                img.onload = () => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                };
+                msgDiv.appendChild(img);
+            } else {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'gaming-overlay-file';
+                fileDiv.textContent = a.filename || 'Unknown File';
+                msgDiv.appendChild(fileDiv);
+            }
+        });
+    }
+
+    if (m.embeds && m.embeds.length > 0) {
+        m.embeds.forEach(e => {
+            const mediaUrl = e.video || e.image || e.thumbnail || (e.url && /\.(gif|png|jpe?g|webp|mp4)/i.test(e.url) ? e.url : null);
+            if (mediaUrl) {
+                hasRenderedMedia = true;
+                if (/\.(mp4|webm)/i.test(mediaUrl) || e.type === 'gifv' || e.video) {
                     const vid = document.createElement('video');
                     vid.src = mediaUrl;
                     vid.autoplay = true;
@@ -274,22 +214,94 @@ ipcRenderer.on('messages-update', (event, messages) => {
                     const img = document.createElement('img');
                     img.src = mediaUrl;
                     img.className = 'gaming-overlay-attachment';
-                    img.onerror = () => { 
-                        console.warn('[Overlay Media Debug] Direct URL image failed to load, removing:', mediaUrl);
-                        img.remove(); 
-                    };
+                    img.onerror = () => { img.remove(); };
                     img.onload = () => {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     };
                     msgDiv.appendChild(img);
                 }
             }
+        });
+    }
+
+    if (!hasRenderedMedia && m.content) {
+        const directImgMatch = m.content.match(/https?:\/\/[^\s]+?\.(?:gif|png|jpe?g|webp|mp4)(?:\?[^\s]*)?/i);
+        if (directImgMatch && directImgMatch[0]) {
+            const mediaUrl = directImgMatch[0];
+            hasRenderedMedia = true;
+            if (/\.(mp4|webm)/i.test(mediaUrl)) {
+                const vid = document.createElement('video');
+                vid.src = mediaUrl;
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.muted = true;
+                vid.setAttribute('playsinline', '');
+                vid.className = 'gaming-overlay-attachment';
+                vid.onerror = () => { vid.remove(); };
+                vid.onloadeddata = () => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                };
+                msgDiv.appendChild(vid);
+            } else {
+                const img = document.createElement('img');
+                img.src = mediaUrl;
+                img.className = 'gaming-overlay-attachment';
+                img.onerror = () => { img.remove(); };
+                img.onload = () => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                };
+                msgDiv.appendChild(img);
+            }
         }
-        
-        messagesContainer.appendChild(msgDiv);
+    }
+    return msgDiv;
+}
+
+ipcRenderer.on('messages-update', (event, messages) => {
+    if (syncDeletedMessages && messages) {
+        messages = messages.filter(m => m.state !== 'DELETED');
+    }
+
+    if (!messages || messages.length === 0) {
+        hasConnectedMessagesChannel = false;
+        messagesContainer.innerHTML = '';
+        updateSectionsVisibility();
+        return;
+    }
+
+    hasConnectedMessagesChannel = true;
+    updateSectionsVisibility();
+
+    const currentJson = JSON.stringify(messages);
+    if (currentJson === lastMessagesJson) return;
+    lastMessagesJson = currentJson;
+    
+    // Incremental DOM update: reuse existing message elements by data-msg-id
+    const existingMsgMap = new Map();
+    Array.from(messagesContainer.children).forEach(child => {
+        if (child.dataset && child.dataset.msgId) {
+            existingMsgMap.set(child.dataset.msgId, child);
+        }
+    });
+
+    const newMsgSet = new Set(messages.map(m => m.id));
+
+    // Remove deleted messages
+    existingMsgMap.forEach((node, id) => {
+        if (!newMsgSet.has(id)) {
+            node.remove();
+            existingMsgMap.delete(id);
+        }
+    });
+
+    messages.forEach(m => {
+        let msgNode = existingMsgMap.get(m.id);
+        if (!msgNode) {
+            msgNode = createMessageElement(m);
+            messagesContainer.appendChild(msgNode);
+        }
     });
     
-    // Auto scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     resetHideTimer();
 });
@@ -366,71 +378,102 @@ function renderVoiceOverlay(data) {
     if (!voiceUsersContainer || !voiceNotifsContainer) return;
 
     // Render Notifications
-    voiceNotifsContainer.innerHTML = '';
-    if (data.eventLogs && data.eventLogs.length > 0) {
-        data.eventLogs.slice(0, 3).forEach(log => {
-            const notifDiv = document.createElement('div');
-            notifDiv.className = `voice-notif-item ${log.type}`;
-            notifDiv.textContent = log.text;
-            voiceNotifsContainer.appendChild(notifDiv);
-        });
+    const newNotifsHtml = (data.eventLogs || []).slice(0, 3).map(log => 
+        `<div class="voice-notif-item ${log.type}">${escapeHtml(log.text)}</div>`
+    ).join('');
+    if (voiceNotifsContainer.innerHTML !== newNotifsHtml) {
+        voiceNotifsContainer.innerHTML = newNotifsHtml;
     }
 
     // Render Connected Voice Users (Sorted)
-    voiceUsersContainer.innerHTML = '';
     if (!data.users || data.users.length === 0) {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.style.color = 'rgba(255,255,255,0.4)';
-        emptyDiv.style.fontSize = '12px';
-        emptyDiv.style.fontStyle = 'italic';
-        emptyDiv.textContent = data.voiceChannelName ? `No one in ${data.voiceChannelName}` : 'No voice channel connected';
-        voiceUsersContainer.appendChild(emptyDiv);
+        const emptyText = data.voiceChannelName ? `No one in ${data.voiceChannelName}` : 'No voice channel connected';
+        if (voiceUsersContainer.dataset.emptyText !== emptyText) {
+            voiceUsersContainer.dataset.emptyText = emptyText;
+            voiceUsersContainer.innerHTML = `<div style="color: rgba(255,255,255,0.4); font-size: 12px; font-style: italic;">${escapeHtml(emptyText)}</div>`;
+        }
         return;
     }
+    delete voiceUsersContainer.dataset.emptyText;
 
     const sortedUsers = sortVoiceUsers(data.users, currentVoiceSortOrder);
 
-    sortedUsers.forEach(user => {
-        const card = document.createElement('div');
-        card.className = 'voice-user-card';
-
-        const avatarWrapper = document.createElement('div');
-        avatarWrapper.className = 'voice-avatar-wrapper';
-
-        const img = document.createElement('img');
-        img.src = user.avatarUrl;
-        img.className = `voice-user-avatar ${user.isSpeaking ? 'speaking' : ''}`;
-        avatarWrapper.appendChild(img);
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'voice-user-name';
-        nameSpan.textContent = user.username;
-
-        const badgesDiv = document.createElement('div');
-        badgesDiv.className = 'voice-status-badges';
-
-        if (user.isWatchingYou) {
-            badgesDiv.innerHTML += '<span class="voice-badge watching" title="Watching your stream">👁</span>';
+    // Map existing card elements by userId
+    const existingCards = new Map();
+    Array.from(voiceUsersContainer.children).forEach(child => {
+        if (child.dataset && child.dataset.userId) {
+            existingCards.set(child.dataset.userId, child);
         }
-        if (user.isLive) {
-            badgesDiv.innerHTML += '<span class="voice-badge live">LIVE</span>';
-        }
-
-        if (user.isForceDeafened) {
-            badgesDiv.innerHTML += '<span class="voice-badge force">Muted/Deafened</span>';
-        } else if (user.isDeafened) {
-            badgesDiv.innerHTML += '<span class="voice-badge">Deafened</span>';
-        } else if (user.isForceMuted) {
-            badgesDiv.innerHTML += '<span class="voice-badge force">Muted</span>';
-        } else if (user.isMuted) {
-            badgesDiv.innerHTML += '<span class="voice-badge">Muted</span>';
-        }
-
-        card.appendChild(avatarWrapper);
-        card.appendChild(nameSpan);
-        card.appendChild(badgesDiv);
-
-        voiceUsersContainer.appendChild(card);
     });
+
+    sortedUsers.forEach((user, index) => {
+        let card = existingCards.get(user.id);
+        
+        let badgesHtml = '';
+        if (user.isWatchingYou) badgesHtml += '<span class="voice-badge watching" title="Watching your stream">👁</span>';
+        if (user.isLive) badgesHtml += '<span class="voice-badge live">LIVE</span>';
+        if (user.isForceDeafened) badgesHtml += '<span class="voice-badge force">Muted/Deafened</span>';
+        else if (user.isDeafened) badgesHtml += '<span class="voice-badge">Deafened</span>';
+        else if (user.isForceMuted) badgesHtml += '<span class="voice-badge force">Muted</span>';
+        else if (user.isMuted) badgesHtml += '<span class="voice-badge">Muted</span>';
+
+        if (card) {
+            existingCards.delete(user.id);
+
+            // In-place update speaking ring
+            const avatarImg = card.querySelector('.voice-user-avatar');
+            if (avatarImg) {
+                const isSpk = Boolean(user.isSpeaking);
+                if (avatarImg.classList.contains('speaking') !== isSpk) {
+                    avatarImg.classList.toggle('speaking', isSpk);
+                }
+            }
+
+            // In-place update badges
+            const badgesDiv = card.querySelector('.voice-status-badges');
+            if (badgesDiv && badgesDiv.innerHTML !== badgesHtml) {
+                badgesDiv.innerHTML = badgesHtml;
+            }
+
+            // Reorder node if necessary
+            if (voiceUsersContainer.children[index] !== card) {
+                voiceUsersContainer.insertBefore(card, voiceUsersContainer.children[index] || null);
+            }
+        } else {
+            // Create new card
+            card = document.createElement('div');
+            card.className = 'voice-user-card';
+            card.dataset.userId = user.id;
+
+            const avatarWrapper = document.createElement('div');
+            avatarWrapper.className = 'voice-avatar-wrapper';
+
+            const img = document.createElement('img');
+            img.src = user.avatarUrl;
+            img.className = `voice-user-avatar ${user.isSpeaking ? 'speaking' : ''}`;
+            avatarWrapper.appendChild(img);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'voice-user-name';
+            nameSpan.textContent = user.username;
+
+            const badgesDiv = document.createElement('div');
+            badgesDiv.className = 'voice-status-badges';
+            badgesDiv.innerHTML = badgesHtml;
+
+            card.appendChild(avatarWrapper);
+            card.appendChild(nameSpan);
+            card.appendChild(badgesDiv);
+
+            if (voiceUsersContainer.children[index]) {
+                voiceUsersContainer.insertBefore(card, voiceUsersContainer.children[index]);
+            } else {
+                voiceUsersContainer.appendChild(card);
+            }
+        }
+    });
+
+    // Remove any users who left
+    existingCards.forEach(oldCard => oldCard.remove());
 }
 
