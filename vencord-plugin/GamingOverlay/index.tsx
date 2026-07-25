@@ -20,6 +20,7 @@ import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
 
 let activeChannelId: string | null = null;
 let activeVoiceChannelId: string | null = null;
+let stoppedVoiceChannelId: string | null = null;
 let autoMonitorVoiceSetting = true;
 let ws: WebSocket | null = null;
 let isConnecting = false;
@@ -241,7 +242,9 @@ function sendVoiceToOverlay() {
         const gmStore = GuildMemberStore || findStore("GuildMemberStore");
 
         const connectedVoiceVcId = getConnectedVoiceChannelId();
-        const vcId = autoMonitorVoiceSetting ? (connectedVoiceVcId || activeVoiceChannelId) : (activeVoiceChannelId || connectedVoiceVcId);
+        const vcId = stoppedVoiceChannelId 
+            ? null 
+            : (activeVoiceChannelId || (autoMonitorVoiceSetting ? connectedVoiceVcId : null));
         if (!vcId || !vStore) {
             ws.send(JSON.stringify({
                 type: "VOICE_UPDATE",
@@ -434,7 +437,12 @@ function handleMessageEvent() {
     }, 200);
 }
 
-function handleVoiceEvent() {
+function handleVoiceEvent(data?: any) {
+    if (data && data.type === "VOICE_CHANNEL_SELECT" && data.channelId) {
+        if (data.channelId !== stoppedVoiceChannelId) {
+            stoppedVoiceChannelId = null;
+        }
+    }
     ensureWebSocketConnected(() => {
         setTimeout(() => {
             sendVoiceToOverlay();
@@ -462,7 +470,18 @@ function startTextBridge(channelId: string) {
     });
 }
 
+function stopTextBridge() {
+    activeChannelId = null;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: "MESSAGES_UPDATE",
+            messages: []
+        }));
+    }
+}
+
 function startVoiceBridge(channelId: string) {
+    stoppedVoiceChannelId = null;
     activeVoiceChannelId = channelId;
     ensureWebSocketConnected(() => {
         sendVoiceToOverlay();
@@ -472,6 +491,19 @@ function startVoiceBridge(channelId: string) {
     });
 }
 
+function stopVoiceBridge(channelId?: string) {
+    activeVoiceChannelId = null;
+    stoppedVoiceChannelId = channelId || getConnectedVoiceChannelId();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: "VOICE_UPDATE",
+            voiceChannelName: null,
+            users: [],
+            eventLogs: eventLogList
+        }));
+    }
+}
+
 function stopOverlayBridge() {
     if (ws) {
         ws.close();
@@ -479,6 +511,7 @@ function stopOverlayBridge() {
     }
     activeChannelId = null;
     activeVoiceChannelId = null;
+    stoppedVoiceChannelId = null;
     
     if (FluxDispatcher) {
         FluxDispatcher.unsubscribe("MESSAGE_CREATE", handleMessageEvent);
@@ -499,24 +532,48 @@ export default definePlugin({
             if (!props || !props.channel) return;
             
             if (props.channel.type === 0 || props.channel.type === 5) {
+                const isMonitoringText = (activeChannelId === props.channel.id);
                 children.push(
                     <Menu.MenuGroup key="gaming-overlay-group-text">
                         <Menu.MenuItem 
                             id="gaming-overlay-popout-text" 
-                            label="Monitor Chat in Overlay" 
-                            action={() => startTextBridge(props.channel.id)} 
+                            label={isMonitoringText ? "Stop Monitoring Chat in Overlay" : "Monitor Chat in Overlay"} 
+                            action={() => {
+                                if (isMonitoringText) {
+                                    stopTextBridge();
+                                    try { showToast("Stopped Monitoring Chat", Toasts.Type.SUCCESS); } catch(e) {}
+                                } else {
+                                    startTextBridge(props.channel.id);
+                                    try { showToast("Monitoring Chat in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                                }
+                            }} 
                         />
                     </Menu.MenuGroup>
                 );
             }
             
             if (props.channel.type === 2 || props.channel.type === 13) {
+                const connectedVoiceVcId = getConnectedVoiceChannelId();
+                const currentEffectiveVoiceId = stoppedVoiceChannelId 
+                    ? null 
+                    : (activeVoiceChannelId || (autoMonitorVoiceSetting ? connectedVoiceVcId : null));
+
+                const isMonitoringVoice = (currentEffectiveVoiceId === props.channel.id);
+
                 children.push(
                     <Menu.MenuGroup key="gaming-overlay-group-voice">
                         <Menu.MenuItem 
                             id="gaming-overlay-popout-voice" 
-                            label="Monitor Voice in Overlay" 
-                            action={() => startVoiceBridge(props.channel.id)} 
+                            label={isMonitoringVoice ? "Stop Monitoring Voice in Overlay" : "Monitor Voice in Overlay"} 
+                            action={() => {
+                                if (isMonitoringVoice) {
+                                    stopVoiceBridge(props.channel.id);
+                                    try { showToast("Stopped Monitoring Voice", Toasts.Type.SUCCESS); } catch(e) {}
+                                } else {
+                                    startVoiceBridge(props.channel.id);
+                                    try { showToast("Monitoring Voice in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                                }
+                            }} 
                         />
                     </Menu.MenuGroup>
                 );
