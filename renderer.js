@@ -327,6 +327,7 @@ ipcRenderer.on('set-voice-sort', (event, sortOrder) => {
 });
 
 let lastUserCount = -1;
+let lastVoiceUpdateJson = '';
 
 // Voice Overlay rendering
 ipcRenderer.on('voice-update', (event, data) => {
@@ -339,7 +340,16 @@ ipcRenderer.on('voice-update', (event, data) => {
             ipcRenderer.send('voice-user-count', currentCount);
         }
     }
-    resetHideTimer();
+
+    const currentVoiceJson = JSON.stringify({
+        users: (data?.users || []).map(u => ({ id: u.userId, s: u.isSpeaking, m: u.isMuted, d: u.isDeafened, l: u.isLive, w: u.isWatchingYou })),
+        logs: (data?.eventLogs || []).map(l => l.id)
+    });
+
+    if (currentVoiceJson !== lastVoiceUpdateJson) {
+        lastVoiceUpdateJson = currentVoiceJson;
+        resetHideTimer();
+    }
 });
 
 function sortVoiceUsers(users, sortMode) {
@@ -390,12 +400,6 @@ function renderVoiceOverlay(data) {
     // Render Connected Voice Users (Sorted)
     voiceUsersContainer.innerHTML = '';
     if (!data.users || data.users.length === 0) {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.style.color = 'rgba(255,255,255,0.4)';
-        emptyDiv.style.fontSize = '12px';
-        emptyDiv.style.fontStyle = 'italic';
-        emptyDiv.textContent = data.voiceChannelName ? `No one in ${data.voiceChannelName}` : 'No voice channel connected';
-        voiceUsersContainer.appendChild(emptyDiv);
         return;
     }
 
