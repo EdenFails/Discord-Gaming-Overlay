@@ -133,6 +133,8 @@ function createWindow() {
 
     if (process.platform === 'linux') {
         windowOptions.type = 'tooltip';
+    } else if (process.platform === 'win32') {
+        windowOptions.type = 'toolbar';
     }
 
     mainWindow = new BrowserWindow(windowOptions);
@@ -143,7 +145,14 @@ function createWindow() {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
     }
 
-    mainWindow.setAlwaysOnTop(true, 'pop-up-menu', 1);
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+
+    // Periodic assertion to prevent DirectX Flip Model borderless games (Unreal Engine, etc.) from taking over Z-order
+    setInterval(() => {
+        if (mainWindow && !mainWindow.isDestroyed() && isOverlayVisible) {
+            mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+        }
+    }, 3000);
     
     if (typeof mainWindow.setVisibleOnAllWorkspaces === 'function') {
         mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
