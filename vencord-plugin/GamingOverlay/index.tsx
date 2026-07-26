@@ -522,66 +522,99 @@ function stopOverlayBridge() {
     }
 }
 
+function patchChannelContextMenu(children: any[], props: any) {
+    if (!props || !props.channel) return;
+    const channel = props.channel;
+    
+    // Text Chat Monitoring (supported on ALL channels: Server Text, Voice Chat Text, DMs, Group DMs, Threads)
+    const isMonitoringText = (activeChannelId === channel.id);
+    children.push(
+        <Menu.MenuGroup key="gaming-overlay-group-text">
+            <Menu.MenuItem 
+                id="gaming-overlay-popout-text" 
+                label={isMonitoringText ? "Stop Monitoring Chat in Overlay" : "Monitor Chat in Overlay"} 
+                action={() => {
+                    if (isMonitoringText) {
+                        stopTextBridge();
+                        try { showToast("Stopped Monitoring Chat", Toasts.Type.SUCCESS); } catch(e) {}
+                    } else {
+                        startTextBridge(channel.id);
+                        try { showToast("Monitoring Chat in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                    }
+                }} 
+            />
+        </Menu.MenuGroup>
+    );
+
+    // Voice Chat Monitoring (supported on Voice channels, Stage channels, Group DM calls)
+    if (channel.type === 2 || channel.type === 13 || channel.type === 3) {
+        const connectedVoiceVcId = getConnectedVoiceChannelId();
+        const currentEffectiveVoiceId = stoppedVoiceChannelId 
+            ? null 
+            : (activeVoiceChannelId || (autoMonitorVoiceSetting ? connectedVoiceVcId : null));
+
+        const isMonitoringVoice = (currentEffectiveVoiceId === channel.id);
+
+        children.push(
+            <Menu.MenuGroup key="gaming-overlay-group-voice">
+                <Menu.MenuItem 
+                    id="gaming-overlay-popout-voice" 
+                    label={isMonitoringVoice ? "Stop Monitoring Voice in Overlay" : "Monitor Voice in Overlay"} 
+                    action={() => {
+                        if (isMonitoringVoice) {
+                            stopVoiceBridge(channel.id);
+                            try { showToast("Stopped Monitoring Voice", Toasts.Type.SUCCESS); } catch(e) {}
+                        } else {
+                            startVoiceBridge(channel.id);
+                            try { showToast("Monitoring Voice in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                        }
+                    }} 
+                />
+            </Menu.MenuGroup>
+        );
+    }
+}
+
+function patchUserContextMenu(children: any[], props: any) {
+    if (!props || !props.user) return;
+    const cStore = ChannelStore || findStore("ChannelStore");
+    const dmChannelId = cStore?.getDMFromUserId?.(props.user.id);
+    if (!dmChannelId) return;
+
+    const isMonitoringText = (activeChannelId === dmChannelId);
+    children.push(
+        <Menu.MenuGroup key="gaming-overlay-group-user-dm">
+            <Menu.MenuItem 
+                id="gaming-overlay-popout-user-dm" 
+                label={isMonitoringText ? "Stop Monitoring DM Chat in Overlay" : "Monitor DM Chat in Overlay"} 
+                action={() => {
+                    if (isMonitoringText) {
+                        stopTextBridge();
+                        try { showToast("Stopped Monitoring DM Chat", Toasts.Type.SUCCESS); } catch(e) {}
+                    } else {
+                        startTextBridge(dmChannelId);
+                        try { showToast("Monitoring DM Chat in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                    }
+                }} 
+            />
+        </Menu.MenuGroup>
+    );
+}
+
 export default definePlugin({
     name: "GamingOverlay",
     description: "Acts as a data bridge to the standalone Gaming Overlay external app.",
     authors: [{ name: "Principal Software Engineer", id: 1n }],
     start() {
         ensureWebSocketConnected();
-        addContextMenuPatch("channel-context", (children, props) => {
-            if (!props || !props.channel) return;
-            
-            if (props.channel.type === 0 || props.channel.type === 5) {
-                const isMonitoringText = (activeChannelId === props.channel.id);
-                children.push(
-                    <Menu.MenuGroup key="gaming-overlay-group-text">
-                        <Menu.MenuItem 
-                            id="gaming-overlay-popout-text" 
-                            label={isMonitoringText ? "Stop Monitoring Chat in Overlay" : "Monitor Chat in Overlay"} 
-                            action={() => {
-                                if (isMonitoringText) {
-                                    stopTextBridge();
-                                    try { showToast("Stopped Monitoring Chat", Toasts.Type.SUCCESS); } catch(e) {}
-                                } else {
-                                    startTextBridge(props.channel.id);
-                                    try { showToast("Monitoring Chat in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
-                                }
-                            }} 
-                        />
-                    </Menu.MenuGroup>
-                );
-            }
-            
-            if (props.channel.type === 2 || props.channel.type === 13) {
-                const connectedVoiceVcId = getConnectedVoiceChannelId();
-                const currentEffectiveVoiceId = stoppedVoiceChannelId 
-                    ? null 
-                    : (activeVoiceChannelId || (autoMonitorVoiceSetting ? connectedVoiceVcId : null));
-
-                const isMonitoringVoice = (currentEffectiveVoiceId === props.channel.id);
-
-                children.push(
-                    <Menu.MenuGroup key="gaming-overlay-group-voice">
-                        <Menu.MenuItem 
-                            id="gaming-overlay-popout-voice" 
-                            label={isMonitoringVoice ? "Stop Monitoring Voice in Overlay" : "Monitor Voice in Overlay"} 
-                            action={() => {
-                                if (isMonitoringVoice) {
-                                    stopVoiceBridge(props.channel.id);
-                                    try { showToast("Stopped Monitoring Voice", Toasts.Type.SUCCESS); } catch(e) {}
-                                } else {
-                                    startVoiceBridge(props.channel.id);
-                                    try { showToast("Monitoring Voice in Overlay", Toasts.Type.SUCCESS); } catch(e) {}
-                                }
-                            }} 
-                        />
-                    </Menu.MenuGroup>
-                );
-            }
-        });
+        addContextMenuPatch("channel-context", patchChannelContextMenu);
+        addContextMenuPatch("gdm-context", patchChannelContextMenu);
+        addContextMenuPatch("user-context", patchUserContextMenu);
     },
     stop() {
         removeContextMenuPatch("channel-context");
+        removeContextMenuPatch("gdm-context");
+        removeContextMenuPatch("user-context");
         stopOverlayBridge();
     }
 });
