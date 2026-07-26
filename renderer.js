@@ -24,6 +24,9 @@ let hasConnectedMessagesChannel = false;
 
 ipcRenderer.on('set-sections-config', (event, config) => {
     sectionsConfig = { ...sectionsConfig, ...config };
+    if (typeof config.voiceSpeakingThreshold === 'number') {
+        voiceSpeakingThreshold = config.voiceSpeakingThreshold;
+    }
     updateSectionsVisibility();
 });
 
@@ -328,17 +331,42 @@ ipcRenderer.on('set-voice-sort', (event, sortOrder) => {
 
 let lastUserCount = -1;
 let lastVoiceUpdateJson = '';
+let speakingStartTimestamps = {};
+let speakingThresholdTimer = null;
+let voiceSpeakingThreshold = 0.5;
 
 // Voice Overlay rendering
 ipcRenderer.on('voice-update', (event, data) => {
     lastVoiceData = data;
     renderVoiceOverlay(data);
+
+    const now = Date.now();
+    let hasSpeakingUser = false;
+    let maxSpeakingDuration = 0;
+
     if (data && Array.isArray(data.users)) {
         const currentCount = data.users.length;
         if (currentCount !== lastUserCount) {
             lastUserCount = currentCount;
             ipcRenderer.send('voice-user-count', currentCount);
         }
+
+        data.users.forEach(u => {
+            if (u.isSpeaking) {
+                hasSpeakingUser = true;
+                if (!speakingStartTimestamps[u.userId]) {
+                    speakingStartTimestamps[u.userId] = now;
+                }
+                const duration = now - speakingStartTimestamps[u.userId];
+                if (duration > maxSpeakingDuration) {
+                    maxSpeakingDuration = duration;
+                }
+            } else {
+                delete speakingStartTimestamps[u.userId];
+            }
+        });
+    } else {
+        speakingStartTimestamps = {};
     }
 
     const currentVoiceJson = JSON.stringify({
@@ -348,7 +376,26 @@ ipcRenderer.on('voice-update', (event, data) => {
 
     if (currentVoiceJson !== lastVoiceUpdateJson) {
         lastVoiceUpdateJson = currentVoiceJson;
-        resetHideTimer();
+
+        const thresholdMs = (voiceSpeakingThreshold || 0.5) * 1000;
+
+        if (hasSpeakingUser) {
+            if (maxSpeakingDuration >= thresholdMs) {
+                resetHideTimer();
+            } else {
+                if (speakingThresholdTimer) clearTimeout(speakingThresholdTimer);
+                const remainingMs = Math.max(50, thresholdMs - maxSpeakingDuration);
+                speakingThresholdTimer = setTimeout(() => {
+                    const checkNow = Date.now();
+                    const stillSpeaking = Object.values(speakingStartTimestamps).some(start => (checkNow - start) >= thresholdMs);
+                    if (stillSpeaking) {
+                        resetHideTimer();
+                    }
+                }, remainingMs);
+            }
+        } else {
+            resetHideTimer();
+        }
     }
 });
 

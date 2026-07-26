@@ -11,6 +11,8 @@ const showTextSectionInput = document.getElementById('show-text-section-input');
 const showVoiceSectionInput = document.getElementById('show-voice-section-input');
 const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
 const autoMonitorVoiceInput = document.getElementById('auto-monitor-voice-input');
+const voiceThresholdInput = document.getElementById('voice-threshold-input');
+const voiceThresholdVal = document.getElementById('voice-threshold-val');
 const textHeightInput = document.getElementById('text-height-input');
 const voiceHeightInput = document.getElementById('voice-height-input');
 const autoExpandVoiceInput = document.getElementById('auto-expand-voice-input');
@@ -34,6 +36,7 @@ function sendLiveUpdate() {
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,
         autoMonitorVoice: autoMonitorVoiceInput.checked,
+        voiceSpeakingThreshold: parseFloat(voiceThresholdInput.value) || 0.5,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,
@@ -53,6 +56,15 @@ msgOpacityInput.addEventListener('input', () => {
     msgOpacityVal.textContent = Math.round(msgOpacityInput.value * 100) + '%';
     sendLiveUpdate();
 });
+
+if (voiceThresholdInput) {
+    voiceThresholdInput.addEventListener('input', () => {
+        if (voiceThresholdVal) {
+            voiceThresholdVal.textContent = parseFloat(voiceThresholdInput.value).toFixed(1) + 's';
+        }
+        sendLiveUpdate();
+    });
+}
 
 function updateVoiceHeightDisabledState() {
     voiceHeightInput.disabled = autoExpandVoiceInput.checked;
@@ -132,6 +144,11 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     showVoiceSectionInput.checked = config.showVoiceSection !== false;
     showVoiceNotifsInput.checked = config.showVoiceNotifs !== false;
     autoMonitorVoiceInput.checked = config.autoMonitorVoice !== false;
+    if (voiceThresholdInput) {
+        const thresholdVal = typeof config.voiceSpeakingThreshold === 'number' ? config.voiceSpeakingThreshold : 0.5;
+        voiceThresholdInput.value = thresholdVal;
+        if (voiceThresholdVal) voiceThresholdVal.textContent = thresholdVal.toFixed(1) + 's';
+    }
     textHeightInput.value = config.textSectionHeight || 140;
     voiceHeightInput.value = config.voiceSectionHeight || 250;
     autoExpandVoiceInput.checked = Boolean(config.autoExpandVoice);
@@ -176,6 +193,7 @@ saveBtn.addEventListener('click', () => {
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,
         autoMonitorVoice: autoMonitorVoiceInput.checked,
+        voiceSpeakingThreshold: voiceThresholdInput ? parseFloat(voiceThresholdInput.value) || 0.5 : 0.5,
         textSectionHeight: parseInt(textHeightInput.value) || 140,
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,

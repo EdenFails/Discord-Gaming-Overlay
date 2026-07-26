@@ -29,6 +29,7 @@ const store = new Store({
         voiceSectionHeight: 250,
         autoExpandVoice: false,
         autoMonitorVoice: true,
+        voiceSpeakingThreshold: 0.5,
         displayId: null,
         position: 'top-right',
         visibilityKey: 'CommandOrControl+Shift+H',
@@ -175,7 +176,8 @@ function createWindow() {
             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
             textSectionHeight: store.get('textSectionHeight') || 140,
             voiceSectionHeight: store.get('voiceSectionHeight') || 250,
-            autoExpandVoice: store.get('autoExpandVoice') || false
+            autoExpandVoice: store.get('autoExpandVoice') || false,
+            voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5
         });
         mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
 
@@ -385,6 +387,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('voiceSectionHeight', newConfig.voiceSectionHeight);
     store.set('autoExpandVoice', newConfig.autoExpandVoice);
     store.set('autoMonitorVoice', newConfig.autoMonitorVoice);
+    store.set('voiceSpeakingThreshold', newConfig.voiceSpeakingThreshold);
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -405,7 +408,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
             showVoiceNotifs: newConfig.showVoiceNotifs,
             textSectionHeight: newConfig.textSectionHeight || 140,
             voiceSectionHeight: newConfig.voiceSectionHeight || 250,
-            autoExpandVoice: newConfig.autoExpandVoice || false
+            autoExpandVoice: newConfig.autoExpandVoice || false,
+            voiceSpeakingThreshold: typeof newConfig.voiceSpeakingThreshold === 'number' ? newConfig.voiceSpeakingThreshold : 0.5
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
@@ -439,7 +443,8 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             showVoiceNotifs: previewConfig.showVoiceNotifs,
             textSectionHeight: previewConfig.textSectionHeight || 140,
             voiceSectionHeight: previewConfig.voiceSectionHeight || 250,
-            autoExpandVoice: previewConfig.autoExpandVoice || false
+            autoExpandVoice: previewConfig.autoExpandVoice || false,
+            voiceSpeakingThreshold: typeof previewConfig.voiceSpeakingThreshold === 'number' ? previewConfig.voiceSpeakingThreshold : 0.5
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
@@ -548,7 +553,8 @@ function startWebSocketServer() {
                             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
                             textSectionHeight: store.get('textSectionHeight') || 140,
                             voiceSectionHeight: store.get('voiceSectionHeight') || 250,
-                            autoExpandVoice: store.get('autoExpandVoice') || false
+                            autoExpandVoice: store.get('autoExpandVoice') || false,
+                            voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5
                         });
                     }
                     if (settingsWindow) {
