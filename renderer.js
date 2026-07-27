@@ -460,6 +460,8 @@ ipcRenderer.on('voice-update', (event, data) => {
     const isMajorChange = (typeof lastMajorVoiceJson !== 'undefined' && majorVoiceJson !== lastMajorVoiceJson);
     lastMajorVoiceJson = majorVoiceJson;
 
+    const currentVoiceJson = JSON.stringify(data);
+
     if (currentVoiceJson !== lastVoiceUpdateJson) {
         lastVoiceUpdateJson = currentVoiceJson;
 

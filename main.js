@@ -664,12 +664,6 @@ function startWebSocketServer() {
                             voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5
                         });
                     }
-                    if (settingsWindow) {
-                        settingsWindow.webContents.send('load-settings', {
-                            config: store.getAll(),
-                            displays: screen.getAllDisplays()
-                        });
-                    }
                 } else if (data.type === "DEBUG_LOG") {
                     console.log("Plugin Debug:", data.message);
                 }
