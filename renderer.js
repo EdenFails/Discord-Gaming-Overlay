@@ -154,6 +154,46 @@ ipcRenderer.on('toggle-typing', (event, typingMode) => {
 });
 
 let lastMessagesJson = '';
+let lastSeenMessageId = null;
+let audioCtx = null;
+let lastChimeTime = 0;
+
+function playChime() {
+    if (sectionsConfig.messageChimeEnabled === false) return;
+    const now = Date.now();
+    const cooldown = (typeof sectionsConfig.messageChimeCooldown === 'number' ? sectionsConfig.messageChimeCooldown : 5) * 1000;
+    if (now - lastChimeTime < cooldown) return;
+    
+    lastChimeTime = now;
+    
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6
+        osc.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.05); // E6
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+        console.error("Failed to play chime", e);
+    }
+}
 
 ipcRenderer.on('messages-update', (event, messages) => {
     if (syncDeletedMessages && messages) {
@@ -172,6 +212,14 @@ ipcRenderer.on('messages-update', (event, messages) => {
     const currentJson = JSON.stringify(messages);
     if (currentJson === lastMessagesJson) return;
     lastMessagesJson = currentJson;
+    
+    const newestMsg = messages[messages.length - 1];
+    if (newestMsg && newestMsg.id) {
+        if (lastSeenMessageId && newestMsg.id !== lastSeenMessageId && newestMsg.state !== 'DELETED') {
+            playChime();
+        }
+        lastSeenMessageId = newestMsg.id;
+    }
     
     messagesContainer.innerHTML = '';
     

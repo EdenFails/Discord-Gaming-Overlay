@@ -22,6 +22,9 @@ const positionInput = document.getElementById('position-input');
 const visibilityKeyInput = document.getElementById('visibility-key-input');
 const typingKeyInput = document.getElementById('typing-key-input');
 const vencordPluginPathInput = document.getElementById('vencord-plugin-path-input');
+const messageChimeInput = document.getElementById('message-chime-input');
+const chimeCooldownInput = document.getElementById('chime-cooldown-input');
+const chimeCooldownVal = document.getElementById('chime-cooldown-val');
 const saveBtn = document.getElementById('save-btn');
 
 // Send live preview updates
@@ -42,7 +45,9 @@ function sendLiveUpdate() {
         autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
         displayId: parseInt(displayInput.value),
-        position: positionInput.value
+        position: positionInput.value,
+        messageChimeEnabled: messageChimeInput.checked,
+        messageChimeCooldown: parseInt(chimeCooldownInput.value) || 5
     });
 }
 
@@ -61,6 +66,15 @@ if (voiceThresholdInput) {
     voiceThresholdInput.addEventListener('input', () => {
         if (voiceThresholdVal) {
             voiceThresholdVal.textContent = parseFloat(voiceThresholdInput.value).toFixed(1) + 's';
+        }
+        sendLiveUpdate();
+    });
+}
+
+if (chimeCooldownInput) {
+    chimeCooldownInput.addEventListener('input', () => {
+        if (chimeCooldownVal) {
+            chimeCooldownVal.textContent = parseInt(chimeCooldownInput.value) + 's';
         }
         sendLiveUpdate();
     });
@@ -89,6 +103,7 @@ textHeightInput.addEventListener('change', sendLiveUpdate);
 voiceHeightInput.addEventListener('input', sendLiveUpdate);
 voiceHeightInput.addEventListener('change', sendLiveUpdate);
 voiceSortInput.addEventListener('change', sendLiveUpdate);
+if (messageChimeInput) messageChimeInput.addEventListener('change', sendLiveUpdate);
 
 // Keybind listener logic
 let currentRecordingInput = null;
@@ -161,6 +176,13 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     if (vencordPluginPathInput) {
         vencordPluginPathInput.value = config.vencordPluginPath || '';
     }
+    if (messageChimeInput) {
+        messageChimeInput.checked = config.messageChimeEnabled !== false;
+    }
+    if (chimeCooldownInput) {
+        chimeCooldownInput.value = config.messageChimeCooldown ?? 5;
+        if (chimeCooldownVal) chimeCooldownVal.textContent = (config.messageChimeCooldown ?? 5) + 's';
+    }
     
     // Populate displays
     displayInput.innerHTML = '';
@@ -202,7 +224,9 @@ saveBtn.addEventListener('click', () => {
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
         typingKey: typingKeyInput.value,
-        vencordPluginPath: vencordPluginPathInput ? vencordPluginPathInput.value : ''
+        vencordPluginPath: vencordPluginPathInput ? vencordPluginPathInput.value : '',
+        messageChimeEnabled: messageChimeInput ? messageChimeInput.checked : true,
+        messageChimeCooldown: chimeCooldownInput ? (parseInt(chimeCooldownInput.value) || 5) : 5
     };
     
     saveBtn.textContent = 'Saved!';

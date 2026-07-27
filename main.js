@@ -33,7 +33,9 @@ const store = new Store({
         displayId: null,
         position: 'top-right',
         visibilityKey: 'Ctrl+Shift+H',
-        typingKey: 'Ctrl+Shift+Enter'
+        typingKey: 'Ctrl+Shift+Enter',
+        messageChimeEnabled: true,
+        messageChimeCooldown: 5
     }
 });
 
@@ -175,6 +177,8 @@ function createWindow() {
             showTextSection: store.get('showTextSection') !== false,
             showVoiceSection: store.get('showVoiceSection') !== false,
             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+            messageChimeEnabled: store.get('messageChimeEnabled') !== false,
+            messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
             textSectionHeight: store.get('textSectionHeight') || 140,
             voiceSectionHeight: store.get('voiceSectionHeight') || 250,
             autoExpandVoice: store.get('autoExpandVoice') || false,
@@ -438,6 +442,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('showTextSection', newConfig.showTextSection);
     store.set('showVoiceSection', newConfig.showVoiceSection);
     store.set('showVoiceNotifs', newConfig.showVoiceNotifs);
+    store.set('messageChimeEnabled', newConfig.messageChimeEnabled);
+    store.set('messageChimeCooldown', newConfig.messageChimeCooldown);
     store.set('voiceSortOrder', newConfig.voiceSortOrder);
     store.set('textSectionHeight', newConfig.textSectionHeight);
     store.set('voiceSectionHeight', newConfig.voiceSectionHeight);
@@ -463,6 +469,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
             showTextSection: newConfig.showTextSection,
             showVoiceSection: newConfig.showVoiceSection,
             showVoiceNotifs: newConfig.showVoiceNotifs,
+            messageChimeEnabled: newConfig.messageChimeEnabled !== false,
+            messageChimeCooldown: typeof newConfig.messageChimeCooldown === 'number' ? newConfig.messageChimeCooldown : 5,
             textSectionHeight: newConfig.textSectionHeight || 140,
             voiceSectionHeight: newConfig.voiceSectionHeight || 250,
             autoExpandVoice: newConfig.autoExpandVoice || false,
@@ -499,6 +507,8 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             showTextSection: previewConfig.showTextSection,
             showVoiceSection: previewConfig.showVoiceSection,
             showVoiceNotifs: previewConfig.showVoiceNotifs,
+            messageChimeEnabled: previewConfig.messageChimeEnabled !== false,
+            messageChimeCooldown: typeof previewConfig.messageChimeCooldown === 'number' ? previewConfig.messageChimeCooldown : 5,
             textSectionHeight: previewConfig.textSectionHeight || 140,
             voiceSectionHeight: previewConfig.voiceSectionHeight || 250,
             autoExpandVoice: previewConfig.autoExpandVoice || false,
@@ -538,6 +548,8 @@ ipcMain.on('voice-user-count', (event, count) => {
             showTextSection: store.get('showTextSection') !== false,
             showVoiceSection: store.get('showVoiceSection') !== false,
             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+            messageChimeEnabled: store.get('messageChimeEnabled') !== false,
+            messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
             textSectionHeight: store.get('textSectionHeight') || 140,
             voiceSectionHeight: bounds.effectiveVoiceHeight,
             autoExpandVoice: true
@@ -610,6 +622,8 @@ function startWebSocketServer() {
                             showTextSection: store.get('showTextSection') !== false,
                             showVoiceSection: store.get('showVoiceSection') !== false,
                             showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+                            messageChimeEnabled: store.get('messageChimeEnabled') !== false,
+                            messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
                             textSectionHeight: store.get('textSectionHeight') || 140,
                             voiceSectionHeight: store.get('voiceSectionHeight') || 250,
                             autoExpandVoice: store.get('autoExpandVoice') || false,

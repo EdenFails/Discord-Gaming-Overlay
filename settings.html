@@ -20,14 +20,34 @@
             padding-bottom: 10px;
         }
 
-        .setting-group {
+        .settings-category {
+            background-color: #1e1f22;
+            border-radius: 8px;
+            padding: 15px;
             margin-bottom: 20px;
+            border: 1px solid #313338;
+        }
+
+        .category-header {
+            color: #f2f3f5;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #3f4147;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        .setting-group:last-child {
+            margin-bottom: 0;
         }
 
         .setting-label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             font-size: 14px;
             color: #b5bac1;
         }
@@ -43,10 +63,10 @@
             accent-color: #5865F2;
         }
 
-        select, input[type="text"] {
+        select, input[type="text"], input[type="number"] {
             width: 100%;
-            background-color: #1e1f22;
-            border: 1px solid #1e1f22;
+            background-color: #2b2d31;
+            border: 1px solid #2b2d31;
             color: #dbdee1;
             padding: 10px;
             border-radius: 4px;
@@ -55,7 +75,7 @@
             font-family: inherit;
         }
 
-        select:focus, input[type="text"]:focus {
+        select:focus, input[type="text"]:focus, input[type="number"]:focus {
             border-color: #5865F2;
         }
 
@@ -63,12 +83,14 @@
             background-color: #5865F2;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
             width: 100%;
             margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 15px;
             transition: background-color 0.2s;
         }
 
@@ -76,138 +98,139 @@
             background-color: #4752c4;
         }
 
-        #opacity-val {
+        .val-display {
             float: right;
             color: #fff;
         }
     </style>
 </head>
 <body>
-    <h2>Settings</h2>
+    <h2>Overlay Settings</h2>
     
-    <div class="setting-group">
-        <span class="setting-label">Window Background Opacity <span id="opacity-val">40%</span></span>
-        <div class="setting-description">How dark the entire overlay background is.</div>
-        <input type="range" id="opacity-input" min="0" max="1" step="0.05" value="0.4">
+    <div class="settings-category">
+        <div class="category-header">General</div>
+        <div class="setting-group">
+            <span class="setting-label">Display Monitor</span>
+            <div class="setting-description">Which screen to spawn the overlay on.</div>
+            <select id="display-input"></select>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Screen Position</span>
+            <select id="position-input">
+                <option value="top-right">Top Right</option>
+                <option value="top-left">Top Left</option>
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Window Background Opacity <span class="val-display" id="opacity-val">40%</span></span>
+            <div class="setting-description">How dark the entire overlay background is.</div>
+            <input type="range" id="opacity-input" min="0" max="1" step="0.05" value="0.4">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Toggle Visibility Hotkey</span>
+            <div class="setting-description">Keybind to completely hide/show the overlay. (e.g. Ctrl+Shift+H)</div>
+            <input type="text" id="visibility-key-input" placeholder="e.g. CommandOrControl+Shift+H">
+        </div>
     </div>
 
-    <div class="setting-group">
-        <span class="setting-label">Message Background Opacity <span id="msg-opacity-val">0%</span></span>
-        <div class="setting-description">How dark the background behind each message is.</div>
-        <input type="range" id="msg-opacity-input" min="0" max="1" step="0.05" value="0">
+    <div class="settings-category">
+        <div class="category-header">Text Chat</div>
+        <div class="setting-group">
+            <span class="setting-label">Show Text Chat Overlay</span>
+            <div class="setting-description">Displays text chat messages and input box.</div>
+            <input type="checkbox" id="show-text-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Message Background Opacity <span class="val-display" id="msg-opacity-val">0%</span></span>
+            <div class="setting-description">How dark the background behind each message is.</div>
+            <input type="range" id="msg-opacity-input" min="0" max="1" step="0.05" value="0">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Auto-Hide Chat</span>
+            <div class="setting-description">Fades the chat completely out when there is no activity.</div>
+            <input type="checkbox" id="auto-hide-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Auto-Hide Delay (Seconds)</span>
+            <input type="number" id="auto-hide-delay-input" min="1" max="300" value="20">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Sync Deleted Messages</span>
+            <div class="setting-description">Instantly removes messages from overlay if deleted in Discord.</div>
+            <input type="checkbox" id="delete-messages-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Text Chat Max Height (px)</span>
+            <input type="number" id="text-height-input" min="80" max="400" value="140">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Toggle Typing Mode Hotkey</span>
+            <div class="setting-description">Keybind to instantly steal focus and start typing. (e.g. Ctrl+Shift+Enter)</div>
+            <input type="text" id="typing-key-input" placeholder="e.g. CommandOrControl+Shift+Enter">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">New Message Chime</span>
+            <div class="setting-description">Play a soft 'ding' sound when a new message is received.</div>
+            <input type="checkbox" id="message-chime-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Chime Cooldown (Seconds) <span class="val-display" id="chime-cooldown-val">5s</span></span>
+            <div class="setting-description">How long to wait before the chime can play again (prevents spam).</div>
+            <input type="range" id="chime-cooldown-input" min="0" max="30" step="1" value="5">
+        </div>
     </div>
 
-    <div class="setting-group">
-        <span class="setting-label">Auto-Hide Chat</span>
-        <div class="setting-description">Fades the chat completely out when there is no activity.</div>
-        <input type="checkbox" id="auto-hide-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+    <div class="settings-category">
+        <div class="category-header">Voice Chat</div>
+        <div class="setting-group">
+            <span class="setting-label">Show Voice Chat Overlay</span>
+            <div class="setting-description">Displays connected voice channel members, speaking rings, and mute status.</div>
+            <input type="checkbox" id="show-voice-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Auto-Monitor Voice Channels</span>
+            <div class="setting-description">Automatically monitors and displays voice call members whenever you join any voice channel in Discord.</div>
+            <input type="checkbox" id="auto-monitor-voice-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Show Voice Event Notifications</span>
+            <div class="setting-description">Displays text alerts for joins, leaves, mutes, and deafens inside the Voice overlay.</div>
+            <input type="checkbox" id="show-voice-notifs-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Voice Speaking Un-Hide Delay <span class="val-display" id="voice-threshold-val">0.5s</span></span>
+            <div class="setting-description">How long a user must continuously speak before the overlay auto-unhides. Ignores short mic static or coughs.</div>
+            <input type="range" id="voice-threshold-input" min="0.0" max="3.0" step="0.1" value="0.5">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Auto-Expand Voice Section</span>
+            <div class="setting-description">Automatically expands the voice section to fit all call members down to the bottom of your screen. Disables custom pixel height.</div>
+            <input type="checkbox" id="auto-expand-voice-input" style="width: 20px; height: 20px; accent-color: #5865F2;">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Voice Chat Max Height (px)</span>
+            <input type="number" id="voice-height-input" min="80" max="400" value="250">
+        </div>
+        <div class="setting-group">
+            <span class="setting-label">Voice Member Sort Order</span>
+            <select id="voice-sort-input">
+                <option value="friends">Friends First (Default)</option>
+                <option value="speaking">Currently Speaking First</option>
+                <option value="staff">Server Staff / High Roles First</option>
+                <option value="alphabetical">Alphabetical (A-Z)</option>
+            </select>
+        </div>
     </div>
 
-    <div class="setting-group">
-        <span class="setting-label">Auto-Hide Delay (Seconds)</span>
-        <div class="setting-description">How many seconds to wait before hiding the chat.</div>
-        <input type="number" id="auto-hide-delay-input" min="1" max="300" value="20" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Sync Deleted Messages</span>
-        <div class="setting-description">If turned on, when someone deletes a message in Discord, it will instantly vanish from the overlay too.</div>
-        <input type="checkbox" id="delete-messages-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Show Text Chat Overlay</span>
-        <div class="setting-description">Displays text chat messages and input box.</div>
-        <input type="checkbox" id="show-text-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Show Voice Chat Overlay</span>
-        <div class="setting-description">Displays connected voice channel members, speaking rings, and mute status.</div>
-        <input type="checkbox" id="show-voice-section-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Show Voice Event Notifications</span>
-        <div class="setting-description">Displays text alerts for joins, leaves, mutes, and deafens inside the Voice overlay.</div>
-        <input type="checkbox" id="show-voice-notifs-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Auto-Monitor Voice Channels</span>
-        <div class="setting-description">Automatically monitors and displays voice call members whenever you join any voice channel in Discord.</div>
-        <input type="checkbox" id="auto-monitor-voice-input" style="width: 20px; height: 20px; accent-color: #5865F2;" checked>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Voice Speaking Un-Hide Delay <span id="voice-threshold-val">0.5s</span></span>
-        <div class="setting-description">How long a user must continuously speak before the overlay auto-unhides. Ignores short mic static or coughs.</div>
-        <input type="range" id="voice-threshold-input" min="0.0" max="3.0" step="0.1" value="0.5">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Text Chat Max Height (px)</span>
-        <div class="setting-description">Custom max height for the text message section when both text and voice are active.</div>
-        <input type="number" id="text-height-input" min="80" max="400" value="140" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Auto-Expand Voice Section</span>
-        <div class="setting-description">Automatically expands the voice section to fit all call members down to the bottom of your screen. Disables custom pixel height.</div>
-        <input type="checkbox" id="auto-expand-voice-input" style="width: 20px; height: 20px; accent-color: #5865F2;">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Voice Chat Max Height (px)</span>
-        <div class="setting-description">Custom max height for the voice members section when both text and voice are active.</div>
-        <input type="number" id="voice-height-input" min="80" max="400" value="250" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Voice Member Sort Order</span>
-        <div class="setting-description">Who to prioritize at the top of the voice member list in large calls.</div>
-        <select id="voice-sort-input" style="width: 100%; padding: 10px; background: #1e1f22; color: #dbdee1; border: 1px solid #1e1f22; border-radius: 4px; box-sizing: border-box; outline: none; font-family: inherit;">
-            <option value="friends">Friends First (Default)</option>
-            <option value="speaking">Currently Speaking First</option>
-            <option value="staff">Server Staff / High Roles First</option>
-            <option value="alphabetical">Alphabetical (A-Z)</option>
-        </select>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Display Monitor</span>
-        <div class="setting-description">Which screen to spawn the overlay on.</div>
-        <select id="display-input">
-            <!-- Populated by JS -->
-        </select>
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Screen Position</span>
-        <select id="position-input">
-            <option value="top-right">Top Right</option>
-            <option value="top-left">Top Left</option>
-            <option value="bottom-right">Bottom Right</option>
-            <option value="bottom-left">Bottom Left</option>
-        </select>
-    </div>
-    
-    <div class="setting-group">
-        <span class="setting-label">Toggle Visibility Hotkey</span>
-        <div class="setting-description">Keybind to completely hide/show the overlay. (Must use modifiers + exactly ONE normal key. E.g. Ctrl+Shift+H)</div>
-        <input type="text" id="visibility-key-input" placeholder="e.g. CommandOrControl+Shift+H">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Vencord Userplugins Path</span>
-        <div class="setting-description">Optional. Path to your Vencord userplugins folder. If set, the app will automatically update the GamingOverlay plugin there on startup.</div>
-        <input type="text" id="vencord-plugin-path-input" placeholder="e.g. C:\Users\Username\AppData\Roaming\Vencord\src\userplugins">
-    </div>
-
-    <div class="setting-group">
-        <span class="setting-label">Toggle Typing Mode Hotkey</span>
-        <div class="setting-description">Keybind to start typing in the overlay. (Must use modifiers + exactly ONE normal key. E.g. Ctrl+Shift+Enter)</div>
-        <input type="text" id="typing-key-input" placeholder="e.g. CommandOrControl+Shift+Enter">
+    <div class="settings-category">
+        <div class="category-header">Advanced</div>
+        <div class="setting-group">
+            <span class="setting-label">Vencord Userplugins Path</span>
+            <div class="setting-description">Optional. Path to your Vencord userplugins folder. If set, the app will automatically update the GamingOverlay plugin there on startup.</div>
+            <input type="text" id="vencord-plugin-path-input" placeholder="e.g. C:\Users\Username\AppData\Roaming\Vencord\src\userplugins">
+        </div>
     </div>
 
     <button class="save-btn" id="save-btn">Save Settings</button>
