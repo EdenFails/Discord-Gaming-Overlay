@@ -21,6 +21,7 @@ import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
 
 let activeChannelId: string | null = null;
 let activeVoiceChannelId: string | null = null;
+let typingInterval: any = null;
 let stoppedVoiceChannelId: string | null = null;
 let autoMonitorVoiceSetting = true;
 let ws: WebSocket | null = null;
@@ -106,8 +107,6 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
             FluxDispatcher.subscribe("MESSAGE_CREATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_UPDATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_DELETE", handleMessageEvent);
-            FluxDispatcher.subscribe("TYPING_START", handleTypingEvent);
-            FluxDispatcher.subscribe("TYPING_STOP", handleTypingEvent);
             FluxDispatcher.subscribe("VOICE_CHANNEL_SELECT", handleVoiceEvent);
             FluxDispatcher.subscribe("RTC_CONNECTION_STATE", handleVoiceEvent);
             FluxDispatcher.subscribe("CHANNEL_SELECT", handleVoiceEvent);
@@ -481,15 +480,6 @@ function sendTypingToOverlay() {
     }));
 }
 
-function handleTypingEvent(data: any) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "DEBUG_LOG", message: "TYPING EVENT FIRED: " + (data ? data.type : "none") }));
-    }
-    ensureWebSocketConnected(() => {
-        sendTypingToOverlay();
-    });
-}
-
 function handleVoiceEvent(data?: any) {
     if (data && data.type === "VOICE_CHANNEL_SELECT" && data.channelId) {
         if (data.channelId !== stoppedVoiceChannelId) {
@@ -515,6 +505,10 @@ function handleSpeakingEvent(data: any) {
 
 function startTextBridge(channelId: string) {
     activeChannelId = channelId;
+    if (typingInterval) clearInterval(typingInterval);
+    typingInterval = setInterval(() => {
+        sendTypingToOverlay();
+    }, 1000);
     ensureWebSocketConnected(() => {
         sendMessagesToOverlay();
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -525,6 +519,10 @@ function startTextBridge(channelId: string) {
 
 function stopTextBridge() {
     activeChannelId = null;
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: "MESSAGES_UPDATE",
@@ -566,12 +564,15 @@ function stopOverlayBridge() {
     activeVoiceChannelId = null;
     stoppedVoiceChannelId = null;
     
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
+    
     if (FluxDispatcher) {
         FluxDispatcher.unsubscribe("MESSAGE_CREATE", handleMessageEvent);
         FluxDispatcher.unsubscribe("MESSAGE_UPDATE", handleMessageEvent);
         FluxDispatcher.unsubscribe("MESSAGE_DELETE", handleMessageEvent);
-        FluxDispatcher.unsubscribe("TYPING_START", handleTypingEvent);
-        FluxDispatcher.unsubscribe("TYPING_STOP", handleTypingEvent);
         FluxDispatcher.unsubscribe("VOICE_STATE_UPDATES", handleVoiceEvent);
         FluxDispatcher.unsubscribe("SPEAKING", handleSpeakingEvent);
     }
