@@ -14,7 +14,8 @@ import {
     UserStore,
     RelationshipStore,
     ApplicationStreamingStore,
-    ChannelRTCStore
+    ChannelRTCStore,
+    TypingStore
 } from "@webpack/common";
 import { findByProps, findStore } from "@webpack";
 import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
@@ -458,11 +459,9 @@ function handleMessageEvent() {
 function sendTypingToOverlay() {
     if (!activeChannelId || !ws || ws.readyState !== WebSocket.OPEN) return;
     
-    const TypingStore = findStore("TypingStore") || findByProps("getTypingUsers");
     const typingObj = TypingStore ? TypingStore.getTypingUsers(activeChannelId) : {};
     const typingIds = Object.keys(typingObj || {});
     
-    const UserStore = findStore("UserStore") || findByProps("getCurrentUser");
     const myId = UserStore?.getCurrentUser?.()?.id;
     
     const typingUsers = [];
