@@ -117,17 +117,32 @@ function parseCustomEmojis(text) {
     });
 }
 
+window.addEventListener('focus', () => {
+    if (isTyping) {
+        chatInput.focus();
+    }
+});
+
 ipcRenderer.on('toggle-typing', (event, typingMode) => {
     isTyping = typingMode;
+    const textSection = document.getElementById('text-section');
     
     if (typingMode) {
         container.classList.add('typing-active');
+        if (textSection) textSection.style.display = 'block';
         inputContainer.style.display = 'block';
+        
+        window.focus();
         chatInput.focus();
+        chatInput.select();
+        setTimeout(() => {
+            chatInput.focus();
+        }, 30);
     } else {
         container.classList.remove('typing-active');
         inputContainer.style.display = 'none';
         chatInput.blur();
+        updateSectionsVisibility();
     }
     resetHideTimer();
 });
@@ -158,16 +173,22 @@ ipcRenderer.on('messages-update', (event, messages) => {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'gaming-overlay-message';
         
-        // Strip image/GIF/Tenor/Klipy/Giphy/Imgur URLs from text line to keep messages compact
-        const mediaUrlRegex = /(https?:\/\/[^\s]+\.(?:gif|png|jpe?g|webp|mp4|webm))|(https?:\/\/(?:[a-z0-9-]+\.)?(?:tenor\.com|giphy\.com|klipy\.com|gfycat\.com|imgur\.com|streamable\.com)\/[^\s]+)/gi;
-        let cleanContent = (m.content || '').replace(mediaUrlRegex, '').trim();
+        let cleanContent = m.content || '';
 
-        if (m.embeds && m.embeds.length > 0) {
-            m.embeds.forEach(e => {
-                if (e.url) {
-                    cleanContent = cleanContent.replace(e.url, '').trim();
-                }
+        // Extract all HTTP/HTTPS URLs from content
+        const urlsInContent = cleanContent.match(/https?:\/\/[^\s<>()]+/gi) || [];
+
+        // Check if message has media or embeds (attachments, embeds, or direct media link)
+        const hasEmbedsOrMedia = (m.attachments && m.attachments.length > 0) || 
+                                 (m.embeds && m.embeds.length > 0) ||
+                                 /\.(gif|png|jpe?g|webp|mp4|webm)/i.test(cleanContent);
+
+        if (hasEmbedsOrMedia && urlsInContent.length > 0) {
+            urlsInContent.forEach(url => {
+                cleanContent = cleanContent.replace(url, '').trim();
             });
+            // Clean up left over empty angle brackets < > if user wrapped URL in <>
+            cleanContent = cleanContent.replace(/<>/g, '').trim();
         }
 
         if (cleanContent) {
@@ -315,7 +336,13 @@ chatInput.addEventListener('keydown', (e) => {
         if (content) {
             ipcRenderer.send('send-message', content);
             chatInput.value = '';
+        } else {
+            ipcRenderer.send('send-message', ''); // Close typing mode if empty
         }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        chatInput.value = '';
+        ipcRenderer.send('send-message', ''); // Cancel typing mode on Escape
     }
 });
 
@@ -334,6 +361,7 @@ let lastVoiceUpdateJson = '';
 let speakingStartTimestamps = {};
 let speakingThresholdTimer = null;
 let voiceSpeakingThreshold = 0.5;
+let lastMajorVoiceJson = '';
 
 // Voice Overlay rendering
 ipcRenderer.on('voice-update', (event, data) => {
@@ -369,10 +397,14 @@ ipcRenderer.on('voice-update', (event, data) => {
         speakingStartTimestamps = {};
     }
 
-    const currentVoiceJson = JSON.stringify({
-        users: (data?.users || []).map(u => ({ id: u.userId, s: u.isSpeaking, m: u.isMuted, d: u.isDeafened, l: u.isLive, w: u.isWatchingYou })),
+    // Create a JSON without speaking states to detect "major" changes (joins, leaves, mutes)
+    const majorVoiceJson = JSON.stringify({
+        users: (data?.users || []).map(u => ({ id: u.userId, m: u.isMuted, d: u.isDeafened, l: u.isLive, w: u.isWatchingYou })),
         logs: (data?.eventLogs || []).map(l => l.id)
     });
+
+    const isMajorChange = (typeof lastMajorVoiceJson !== 'undefined' && majorVoiceJson !== lastMajorVoiceJson);
+    lastMajorVoiceJson = majorVoiceJson;
 
     if (currentVoiceJson !== lastVoiceUpdateJson) {
         lastVoiceUpdateJson = currentVoiceJson;
@@ -392,9 +424,18 @@ ipcRenderer.on('voice-update', (event, data) => {
                         resetHideTimer();
                     }
                 }, remainingMs);
+                
+                // If there's also a major change (like someone joined while another is speaking briefly), we should still unhide
+                if (isMajorChange) {
+                    resetHideTimer();
+                }
             }
         } else {
-            resetHideTimer();
+            // No one is speaking. Only unhide if it's a major change (join/leave/mute)
+            // Or if the overlay is CURRENTLY visible, we want to reset the timer to start the fade out delay
+            if (isMajorChange || container.style.opacity == 1) {
+                resetHideTimer();
+            }
         }
     }
 });

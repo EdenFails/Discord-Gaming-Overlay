@@ -32,8 +32,8 @@ const store = new Store({
         voiceSpeakingThreshold: 0.5,
         displayId: null,
         position: 'top-right',
-        visibilityKey: 'CommandOrControl+Shift+H',
-        typingKey: 'CommandOrControl+Shift+Enter'
+        visibilityKey: 'Ctrl+Shift+H',
+        typingKey: 'Ctrl+Shift+Enter'
     }
 });
 
@@ -123,7 +123,7 @@ function createWindow() {
         frame: false,
         alwaysOnTop: true,
         skipTaskbar: true,
-        focusable: false,
+        focusable: true,
         resizable: false,
         hasShadow: false,
         webPreferences: {
@@ -300,11 +300,65 @@ ipcMain.on('cancel-recording-hotkey', () => {
     isRecordingHotkey = false;
 });
 
+function normalizeHotkey(key) {
+    if (!key) return '';
+    return key.replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl');
+}
+
+let previousActiveHwnd = null;
+
+function getMainWindowHwnd() {
+    if (!mainWindow) return '0';
+    try {
+        const buf = mainWindow.getNativeWindowHandle();
+        return process.arch === 'x64' ? buf.readBigInt64LE(0).toString() : buf.readInt32LE(0).toString();
+    } catch(e) {
+        return '0';
+    }
+}
+
+function pullFocusToOverlay() {
+    if (process.platform === 'win32' && mainWindow) {
+        const { exec } = require('child_process');
+        const overlayHwnd = getMainWindowHwnd();
+        const psCmd = `$w='[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);'; $t=Add-Type -MemberDefinition $w -Name WinFocus1 -PassThru; $fg=$t::GetForegroundWindow(); $t::keybd_event(0x12,0,0,0); $t::SetForegroundWindow([IntPtr][int64]${overlayHwnd}); $t::keybd_event(0x12,0,2,0); Write-Output $fg`;
+        
+        exec(`powershell -command "${psCmd}"`, (err, stdout, stderr) => {
+            if (err || stderr) {
+                console.error('[Overlay Focus Debug] pullFocusToOverlay PS Error:', err || stderr);
+            }
+            if (!err && stdout) {
+                const fg = stdout.trim();
+                if (fg && fg !== '0' && fg !== overlayHwnd) {
+                    previousActiveHwnd = fg;
+                    console.log('[Overlay Focus Debug] Captured game HWND:', previousActiveHwnd);
+                }
+            }
+        });
+    }
+}
+
+function returnFocusToGame() {
+    if (process.platform === 'win32' && previousActiveHwnd) {
+        const { exec } = require('child_process');
+        const gameHwnd = previousActiveHwnd;
+        previousActiveHwnd = null;
+        console.log('[Overlay Focus Debug] Returning focus to game HWND:', gameHwnd);
+        const psCmd = `$w='[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);'; $t=Add-Type -MemberDefinition $w -Name WinFocus2 -PassThru; $t::keybd_event(0x12,0,0,0); $t::SetForegroundWindow([IntPtr][int64]${gameHwnd}); $t::keybd_event(0x12,0,2,0);`;
+        
+        exec(`powershell -command "${psCmd}"`, (err, stdout, stderr) => {
+            if (err || stderr) {
+                console.error('[Overlay Focus Debug] returnFocusToGame PS Error:', err || stderr);
+            }
+        });
+    }
+}
+
 function checkHotkeys() {
     const pressedCombo = Array.from(pressedKeys).join('+');
     
     // Check visibility toggle
-    const visKey = store.get('visibilityKey');
+    const visKey = normalizeHotkey(store.get('visibilityKey'));
     if (visKey && visKey === pressedCombo) {
         if (mainWindow) {
             if (isOverlayVisible) {
@@ -312,28 +366,31 @@ function checkHotkeys() {
                 isOverlayVisible = false;
             } else {
                 mainWindow.showInactive();
-                mainWindow.setAlwaysOnTop(true, 'screen-saver');
+                mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
                 isOverlayVisible = true;
             }
         }
     }
 
     // Check typing toggle
-    const typeKey = store.get('typingKey');
+    const typeKey = normalizeHotkey(store.get('typingKey'));
     if (typeKey && typeKey === pressedCombo) {
         if (!mainWindow || !isOverlayVisible) return;
         typingMode = !typingMode;
         if (typingMode) {
-            if (typeof mainWindow.setFocusable === 'function') mainWindow.setFocusable(true);
+            pullFocusToOverlay();
             mainWindow.setIgnoreMouseEvents(false);
+            mainWindow.show();
             mainWindow.focus();
+            if (mainWindow.webContents) mainWindow.webContents.focus();
         } else {
             if (process.platform === 'linux') {
                 mainWindow.setIgnoreMouseEvents(true);
             } else {
                 mainWindow.setIgnoreMouseEvents(true, { forward: true });
             }
-            if (typeof mainWindow.setFocusable === 'function') mainWindow.setFocusable(false);
+            mainWindow.blur();
+            returnFocusToGame();
         }
         mainWindow.webContents.send('toggle-typing', typingMode);
     }
@@ -488,7 +545,7 @@ ipcMain.on('voice-user-count', (event, count) => {
 });
 
 ipcMain.on('send-message', (event, content) => {
-    if (wss) {
+    if (content && wss) {
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ type: "SEND_MESSAGE", content }));
@@ -501,7 +558,8 @@ ipcMain.on('send-message', (event, content) => {
     } else {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
     }
-    if (typeof mainWindow.setFocusable === 'function') mainWindow.setFocusable(false);
+    mainWindow.blur();
+    returnFocusToGame();
     mainWindow.webContents.send('toggle-typing', false);
 });
 

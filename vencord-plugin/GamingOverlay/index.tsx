@@ -1,4 +1,5 @@
 import definePlugin from "@utils/types";
+import { sendMessage } from "@utils/discord";
 import { 
     React, 
     Menu, 
@@ -62,9 +63,24 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                const MessageActions = findByProps("sendMessage");
-                if (data.type === "SEND_MESSAGE" && data.content && activeChannelId && MessageActions) {
-                    MessageActions.sendMessage(activeChannelId, { content: data.content });
+                if (data.type === "SEND_MESSAGE" && data.content) {
+                    const sStore = SelectedChannelStore || findStore("SelectedChannelStore") || findByProps("getChannelId", "getVoiceChannelId");
+                    const targetChannelId = activeChannelId || 
+                                            (sStore && typeof sStore.getChannelId === "function" ? sStore.getChannelId() : null) || 
+                                            (sStore && typeof sStore.getVoiceChannelId === "function" ? sStore.getVoiceChannelId() : null);
+                    
+                    console.log("[GamingOverlay Bridge] Received SEND_MESSAGE request for target channel:", targetChannelId, "Content:", data.content);
+
+                    if (targetChannelId) {
+                        try {
+                            sendMessage(targetChannelId, { content: data.content });
+                            console.log("[GamingOverlay Bridge] Message sent successfully via Vencord sendMessage utility!");
+                        } catch (err) {
+                            console.error("[GamingOverlay Bridge] Failed to send message via Vencord sendMessage utility:", err);
+                        }
+                    } else {
+                        console.error("[GamingOverlay Bridge] No targetChannelId available! Please select or monitor a channel first.");
+                    }
                 } else if (data.type === "CONFIG_UPDATE") {
                     if (typeof data.autoMonitorVoice === "boolean") {
                         autoMonitorVoiceSetting = data.autoMonitorVoice;
