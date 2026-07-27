@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Menu, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, Menu, Tray, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
@@ -686,7 +686,46 @@ function startWebSocketServer() {
     });
 }
 
+function checkLinuxDependencies() {
+    if (process.platform !== 'linux') return;
+    const { exec } = require('child_process');
+    exec('which xdotool', (err) => {
+        if (err) {
+            dialog.showMessageBox({
+                type: 'info',
+                title: 'Missing Dependency',
+                message: 'Discord Gaming Overlay requires "xdotool" for the typing hotkey to work on Linux.\n\nWould you like to automatically install it now? (You will be prompted for your password via pkexec)',
+                buttons: ['Install', 'Cancel'],
+                defaultId: 0
+            }).then(result => {
+                if (result.response === 0) {
+                    exec('which apt-get || which pacman || which dnf', (err2, stdout) => {
+                        const pkg = stdout ? stdout.trim() : '';
+                        let cmd = '';
+                        if (pkg.includes('apt-get')) cmd = 'pkexec apt-get install -y xdotool';
+                        else if (pkg.includes('pacman')) cmd = 'pkexec pacman -S --noconfirm xdotool';
+                        else if (pkg.includes('dnf')) cmd = 'pkexec dnf install -y xdotool';
+                        
+                        if (cmd) {
+                            exec(cmd, (err3, stdout3, stderr3) => {
+                                if (err3) {
+                                    dialog.showMessageBox({ type: 'error', message: 'Failed to install xdotool.\n\n' + (stderr3 || err3.message) });
+                                } else {
+                                    dialog.showMessageBox({ type: 'info', message: 'xdotool installed successfully! The typing hotkey will now work.' });
+                                }
+                            });
+                        } else {
+                            dialog.showMessageBox({ type: 'error', message: 'Could not detect package manager to install xdotool automatically.' });
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+
 app.whenReady().then(() => {
+    checkLinuxDependencies();
     updateVencordPlugin();
 
     try {
