@@ -459,11 +459,11 @@ function handleMessageEvent() {
 function sendTypingToOverlay() {
     if (!activeChannelId || !ws || ws.readyState !== WebSocket.OPEN) return;
     
-    const TypingStore = findStore("TypingStore");
+    const TypingStore = findStore("TypingStore") || findByProps("getTypingUsers");
     const typingObj = TypingStore ? TypingStore.getTypingUsers(activeChannelId) : {};
     const typingIds = Object.keys(typingObj || {});
     
-    const UserStore = findStore("UserStore");
+    const UserStore = findStore("UserStore") || findByProps("getCurrentUser");
     const myId = UserStore?.getCurrentUser?.()?.id;
     
     const typingUsers = [];
@@ -481,7 +481,10 @@ function sendTypingToOverlay() {
     }));
 }
 
-function handleTypingEvent() {
+function handleTypingEvent(data: any) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "DEBUG_LOG", message: "TYPING EVENT FIRED: " + (data ? data.type : "none") }));
+    }
     ensureWebSocketConnected(() => {
         sendTypingToOverlay();
     });

@@ -674,6 +674,14 @@ function startWebSocketServer() {
                     }
                 } else if (data.type === "DEBUG_LOG") {
                     console.log("Plugin Debug:", data.message);
+                    if (mainWindow) {
+                        mainWindow.webContents.send('messages-update', [{
+                            id: 'debug-' + Date.now() + Math.random(),
+                            content: 'DEBUG: ' + data.message,
+                            author: { username: 'System', globalName: 'System', colorString: '#ff0000' },
+                            timestamp: Date.now()
+                        }]);
+                    }
                 }
             } catch (e) {
                 console.error("WS Parse Error", e);
