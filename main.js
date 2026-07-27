@@ -323,7 +323,9 @@ function getMainWindowHwnd() {
 }
 
 function pullFocusToOverlay() {
-    if (process.platform === 'win32' && mainWindow) {
+    if (!mainWindow) return;
+
+    if (process.platform === 'win32') {
         const { execFile } = require('child_process');
         const overlayHwnd = getMainWindowHwnd();
         
@@ -339,11 +341,32 @@ function pullFocusToOverlay() {
                 }
             }
         });
+    } else if (process.platform === 'linux') {
+        const { exec } = require('child_process');
+        
+        exec('xdotool getactivewindow', (err, stdout) => {
+            if (!err && stdout) {
+                const fg = stdout.trim();
+                if (fg && /^\d+$/.test(fg)) {
+                    previousActiveHwnd = fg;
+                    console.log('[Overlay Focus Debug] Captured Linux game Window ID:', previousActiveHwnd);
+                }
+            }
+            
+            // Standard Electron focus
+            mainWindow.setIgnoreMouseEvents(false);
+            mainWindow.focus();
+            
+            // Force focus via xdotool as fallback
+            exec('xdotool search --name "Discord Gaming Overlay" windowactivate', () => {});
+        });
     }
 }
 
 function returnFocusToGame() {
-    if (process.platform === 'win32' && previousActiveHwnd) {
+    if (!previousActiveHwnd) return;
+
+    if (process.platform === 'win32') {
         const { execFile } = require('child_process');
         const gameHwnd = previousActiveHwnd;
         previousActiveHwnd = null;
@@ -352,6 +375,17 @@ function returnFocusToGame() {
         execFile(path.join(__dirname, 'focus.exe'), [gameHwnd], (err, stdout, stderr) => {
             if (err || stderr) {
                 console.error('[Overlay Focus Debug] returnFocusToGame Error:', err || stderr);
+            }
+        });
+    } else if (process.platform === 'linux') {
+        const { exec } = require('child_process');
+        const gameId = previousActiveHwnd;
+        previousActiveHwnd = null;
+        console.log('[Overlay Focus Debug] Returning focus to Linux game Window ID:', gameId);
+        
+        exec(`xdotool windowactivate ${gameId}`, (err, stdout, stderr) => {
+            if (err) {
+                console.error('[Overlay Focus Debug] returnFocusToGame Linux Error:', err || stderr);
             }
         });
     }
