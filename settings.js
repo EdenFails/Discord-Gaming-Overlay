@@ -90,7 +90,18 @@ autoExpandVoiceInput.addEventListener('change', () => {
     sendLiveUpdate();
 });
 
-autoHideInput.addEventListener('change', sendLiveUpdate);
+function updateAutoHideDisabledState() {
+    const autoHideDelayGroup = document.getElementById('auto-hide-delay-group');
+    if (autoHideDelayGroup) {
+        autoHideDelayGroup.style.opacity = autoHideInput.checked ? '1' : '0.4';
+        autoHideDelayInput.disabled = !autoHideInput.checked;
+    }
+}
+
+autoHideInput.addEventListener('change', () => {
+    updateAutoHideDisabledState();
+    sendLiveUpdate();
+});
 autoHideDelayInput.addEventListener('change', sendLiveUpdate);
 autoHideDelayInput.addEventListener('input', sendLiveUpdate);
 deleteMessagesInput.addEventListener('change', sendLiveUpdate);
@@ -168,6 +179,7 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     voiceHeightInput.value = config.voiceSectionHeight || 250;
     autoExpandVoiceInput.checked = Boolean(config.autoExpandVoice);
     updateVoiceHeightDisabledState();
+    updateAutoHideDisabledState();
     voiceSortInput.value = config.voiceSortOrder || 'friends';
 
     positionInput.value = config.position;
