@@ -319,13 +319,12 @@ function getMainWindowHwnd() {
 
 function pullFocusToOverlay() {
     if (process.platform === 'win32' && mainWindow) {
-        const { exec } = require('child_process');
+        const { execFile } = require('child_process');
         const overlayHwnd = getMainWindowHwnd();
-        const psCmd = `$w='[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);'; $t=Add-Type -MemberDefinition $w -Name WinFocus1 -PassThru; $fg=$t::GetForegroundWindow(); $t::keybd_event(0x12,0,0,0); $t::SetForegroundWindow([IntPtr][int64]${overlayHwnd}); $t::keybd_event(0x12,0,2,0); Write-Output $fg`;
         
-        exec(`powershell -command "${psCmd}"`, (err, stdout, stderr) => {
+        execFile(path.join(__dirname, 'focus.exe'), [overlayHwnd], (err, stdout, stderr) => {
             if (err || stderr) {
-                console.error('[Overlay Focus Debug] pullFocusToOverlay PS Error:', err || stderr);
+                console.error('[Overlay Focus Debug] pullFocusToOverlay Error:', err || stderr);
             }
             if (!err && stdout) {
                 const fg = stdout.trim();
@@ -340,15 +339,14 @@ function pullFocusToOverlay() {
 
 function returnFocusToGame() {
     if (process.platform === 'win32' && previousActiveHwnd) {
-        const { exec } = require('child_process');
+        const { execFile } = require('child_process');
         const gameHwnd = previousActiveHwnd;
         previousActiveHwnd = null;
         console.log('[Overlay Focus Debug] Returning focus to game HWND:', gameHwnd);
-        const psCmd = `$w='[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);'; $t=Add-Type -MemberDefinition $w -Name WinFocus2 -PassThru; $t::keybd_event(0x12,0,0,0); $t::SetForegroundWindow([IntPtr][int64]${gameHwnd}); $t::keybd_event(0x12,0,2,0);`;
         
-        exec(`powershell -command "${psCmd}"`, (err, stdout, stderr) => {
+        execFile(path.join(__dirname, 'focus.exe'), [gameHwnd], (err, stdout, stderr) => {
             if (err || stderr) {
-                console.error('[Overlay Focus Debug] returnFocusToGame PS Error:', err || stderr);
+                console.error('[Overlay Focus Debug] returnFocusToGame Error:', err || stderr);
             }
         });
     }
