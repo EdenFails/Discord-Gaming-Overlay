@@ -8,6 +8,8 @@ const autoHideInput = document.getElementById('auto-hide-input');
 const autoHideDelayInput = document.getElementById('auto-hide-delay-input');
 const deleteMessagesInput = document.getElementById('delete-messages-input');
 const typingKeepsAwakeInput = document.getElementById('typing-keeps-awake-input');
+const highlightMessagesInput = document.getElementById('highlight-messages-input');
+const highlightKeywordsInput = document.getElementById('highlight-keywords-input');
 const showTextSectionInput = document.getElementById('show-text-section-input');
 const showVoiceSectionInput = document.getElementById('show-voice-section-input');
 const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
@@ -48,6 +50,8 @@ function sendLiveUpdate() {
         autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
         theme: themeInput ? themeInput.value : 'default',
+        highlightMessages: highlightMessagesInput ? highlightMessagesInput.checked : true,
+        highlightKeywords: highlightKeywordsInput ? highlightKeywordsInput.value : '',
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
         messageChimeEnabled: messageChimeInput.checked,
@@ -108,6 +112,8 @@ autoHideDelayInput.addEventListener('change', sendLiveUpdate);
 autoHideDelayInput.addEventListener('input', sendLiveUpdate);
 deleteMessagesInput.addEventListener('change', sendLiveUpdate);
 if (typingKeepsAwakeInput) typingKeepsAwakeInput.addEventListener('change', sendLiveUpdate);
+if (highlightMessagesInput) highlightMessagesInput.addEventListener('change', sendLiveUpdate);
+if (highlightKeywordsInput) highlightKeywordsInput.addEventListener('input', sendLiveUpdate);
 showTextSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceNotifsInput.addEventListener('change', sendLiveUpdate);
@@ -172,6 +178,12 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     deleteMessagesInput.checked = config.deleteMessages !== false;
     if (typingKeepsAwakeInput) {
         typingKeepsAwakeInput.checked = config.typingKeepsAwake !== false;
+    }
+    if (highlightMessagesInput) {
+        highlightMessagesInput.checked = config.highlightMessages !== false;
+    }
+    if (highlightKeywordsInput) {
+        highlightKeywordsInput.value = config.highlightKeywords || '';
     }
     showTextSectionInput.checked = config.showTextSection !== false;
     showVoiceSectionInput.checked = config.showVoiceSection !== false;
@@ -263,6 +275,8 @@ saveBtn.addEventListener('click', () => {
         autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
         theme: themeInput ? themeInput.value : 'default',
+        highlightMessages: highlightMessagesInput ? highlightMessagesInput.checked : true,
+        highlightKeywords: highlightKeywordsInput ? highlightKeywordsInput.value : '',
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,

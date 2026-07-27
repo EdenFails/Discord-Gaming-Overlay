@@ -173,6 +173,36 @@ function sendMessagesToOverlay() {
         const channel = ChannelStore ? ChannelStore.getChannel(activeChannelId) : null;
         const guildId = channel ? channel.guild_id : null;
 
+        const uStore = UserStore || findStore("UserStore") || findByProps("getCurrentUser");
+        let currentUser = null;
+        try {
+            if (uStore && typeof uStore.getCurrentUser === "function") {
+                currentUser = uStore.getCurrentUser();
+            }
+        } catch (e) {}
+
+        const myId = currentUser ? (currentUser.id || "") : "";
+        const myUsername = currentUser ? (currentUser.username || "") : "";
+        const myGlobalName = currentUser ? (currentUser.globalName || currentUser.username || "") : "";
+        let myNickname = "";
+
+        if (guildId && myId) {
+            const gmStore = GuildMemberStore || findStore("GuildMemberStore") || findByProps("getMember");
+            if (gmStore && typeof gmStore.getMember === "function") {
+                const myMember = gmStore.getMember(guildId, myId);
+                if (myMember && myMember.nick) {
+                    myNickname = myMember.nick;
+                }
+            }
+        }
+
+        const myIdentifiers = {
+            id: myId,
+            username: myUsername,
+            globalName: myGlobalName,
+            nickname: myNickname
+        };
+
         if (msgArray.length > 0) {
             const lastMsgs = msgArray.slice(-20)
                 .filter((m: any) => m && (m.content || (m.attachments && m.attachments.length > 0) || (m.embeds && m.embeds.length > 0)))
@@ -187,10 +217,15 @@ function sendMessagesToOverlay() {
                         }
                     }
 
+                    const isReply = Boolean(m.referenced_message || m.messageReference || m.type === 19);
+
                     return {
                         id: m.id,
                         content: m.content || "",
                         state: m.state,
+                        isReply: isReply,
+                        mentions: (m.mentions || []).map((user: any) => typeof user === 'string' ? user : (user.id || "")),
+                        mention_everyone: Boolean(m.mention_everyone),
                         attachments: (m.attachments || []).map((a: any) => ({
                             url: a.url,
                             proxy_url: a.proxy_url,
@@ -216,6 +251,7 @@ function sendMessagesToOverlay() {
                             };
                         }),
                         author: {
+                            id: author.id || "",
                             username: author.globalName || author.username || "System",
                             color: memberColor || '#ffffff'
                         }
@@ -224,7 +260,8 @@ function sendMessagesToOverlay() {
 
             ws.send(JSON.stringify({
                 type: "MESSAGES_UPDATE",
-                messages: lastMsgs
+                messages: lastMsgs,
+                myIdentifiers: myIdentifiers
             }));
         }
     } catch (e: any) {

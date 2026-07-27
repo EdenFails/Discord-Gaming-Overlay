@@ -148,6 +148,16 @@ ipcRenderer.on('set-typing-key', (event, typingKey) => {
     }
 });
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Simple custom emoji parser: <:name:id> -> <img src="...">
 function parseCustomEmojis(text) {
     if (!text) return "";
@@ -271,7 +281,66 @@ function playChime() {
     }
 }
 
-ipcRenderer.on('messages-update', (event, messages) => {
+let currentMyIdentifiers = null;
+
+function checkIsHighlightedMessage(msg, sectionsConfig) {
+    if (sectionsConfig.highlightMessages === false) return false;
+
+    const content = (msg.content || '').toLowerCase();
+    const myId = (msg.myIdentifiers?.id || currentMyIdentifiers?.id || '');
+    const myUsername = (msg.myIdentifiers?.username || currentMyIdentifiers?.username || '').toLowerCase();
+    const myGlobalName = (msg.myIdentifiers?.globalName || currentMyIdentifiers?.globalName || '').toLowerCase();
+    const myNickname = (msg.myIdentifiers?.nickname || currentMyIdentifiers?.nickname || '').toLowerCase();
+
+    // 1. Direct mention array & broad mention checks
+    if (myId && Array.isArray(msg.mentions) && msg.mentions.includes(myId)) {
+        return true;
+    }
+    if (msg.mention_everyone || content.includes('@everyone') || content.includes('@here')) {
+        return true;
+    }
+
+    // 2. ID check (<@id> or raw ID)
+    if (myId && myId.length > 3 && (content.includes(`<@${myId}>`) || content.includes(`<@!${myId}>`) || content.includes(myId))) {
+        return true;
+    }
+
+    // 3. Username check
+    if (myUsername && myUsername.length > 1 && content.includes(myUsername)) {
+        return true;
+    }
+
+    // 4. Global Display Name check
+    if (myGlobalName && myGlobalName.length > 1 && content.includes(myGlobalName)) {
+        return true;
+    }
+
+    // 5. Server Nickname check
+    if (myNickname && myNickname.length > 1 && content.includes(myNickname)) {
+        return true;
+    }
+
+    // 6. Custom Keywords check
+    const customKeywords = (sectionsConfig.highlightKeywords || '')
+        .split(',')
+        .map(k => k.trim().toLowerCase())
+        .filter(k => k.length > 0);
+
+    for (const kw of customKeywords) {
+        if (content.includes(kw)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+ipcRenderer.on('messages-update', (event, payload) => {
+    let messages = Array.isArray(payload) ? payload : (payload ? payload.messages : []);
+    if (payload && payload.myIdentifiers) {
+        currentMyIdentifiers = payload.myIdentifiers;
+    }
+
     if (syncDeletedMessages && messages) {
         messages = messages.filter(m => m.state !== 'DELETED');
     }
@@ -306,6 +375,10 @@ ipcRenderer.on('messages-update', (event, messages) => {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'gaming-overlay-message';
         
+        if (checkIsHighlightedMessage(m, sectionsConfig)) {
+            msgDiv.classList.add('highlighted-message');
+        }
+        
         let cleanContent = m.content || '';
 
         // Extract all HTTP/HTTPS URLs from content
@@ -324,11 +397,16 @@ ipcRenderer.on('messages-update', (event, messages) => {
             cleanContent = cleanContent.replace(/<>/g, '').trim();
         }
 
+        let replyIconHtml = '';
+        if (m.isReply) {
+            replyIconHtml = `<svg class="reply-badge-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right: 4px; opacity: 0.8; vertical-align: -2px; display: inline-block;" title="Replying to message"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>`;
+        }
+
         if (cleanContent) {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'gaming-overlay-author';
             authorSpan.style.color = m.author.color;
-            authorSpan.textContent = m.author.username + ': ';
+            authorSpan.innerHTML = replyIconHtml + escapeHtml(m.author.username) + ': ';
             
             const contentSpan = document.createElement('span');
             contentSpan.className = 'gaming-overlay-content';
@@ -340,7 +418,7 @@ ipcRenderer.on('messages-update', (event, messages) => {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'gaming-overlay-author';
             authorSpan.style.color = m.author.color;
-            authorSpan.textContent = m.author.username + ':';
+            authorSpan.innerHTML = replyIconHtml + escapeHtml(m.author.username) + ':';
             msgDiv.appendChild(authorSpan);
         }
 

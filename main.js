@@ -76,7 +76,9 @@ const store = new Store({
         typingKey: 'Ctrl+Shift+Enter',
         messageChimeEnabled: true,
         messageChimeCooldown: 5,
-        theme: 'default'
+        theme: 'default',
+        highlightMessages: true,
+        highlightKeywords: ''
     }
 });
 
@@ -233,6 +235,8 @@ function broadcastSavedConfigToOverlay() {
         autoExpandVoice: store.get('autoExpandVoice') || false,
         voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5,
         theme: store.get('theme') || 'default',
+        highlightMessages: store.get('highlightMessages') !== false,
+        highlightKeywords: store.get('highlightKeywords') || '',
         customThemes: getCustomThemes()
     });
     mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
@@ -547,6 +551,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('autoMonitorVoice', newConfig.autoMonitorVoice);
     store.set('voiceSpeakingThreshold', newConfig.voiceSpeakingThreshold);
     store.set('theme', newConfig.theme || 'default');
+    store.set('highlightMessages', newConfig.highlightMessages !== false);
+    store.set('highlightKeywords', newConfig.highlightKeywords || '');
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -574,6 +580,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
             autoExpandVoice: newConfig.autoExpandVoice || false,
             voiceSpeakingThreshold: typeof newConfig.voiceSpeakingThreshold === 'number' ? newConfig.voiceSpeakingThreshold : 0.5,
             theme: newConfig.theme || 'default',
+            highlightMessages: newConfig.highlightMessages !== false,
+            highlightKeywords: newConfig.highlightKeywords || '',
             customThemes: getCustomThemes()
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
@@ -617,6 +625,8 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             autoExpandVoice: previewConfig.autoExpandVoice || false,
             voiceSpeakingThreshold: typeof previewConfig.voiceSpeakingThreshold === 'number' ? previewConfig.voiceSpeakingThreshold : 0.5,
             theme: previewConfig.theme || 'default',
+            highlightMessages: previewConfig.highlightMessages !== false,
+            highlightKeywords: previewConfig.highlightKeywords || '',
             customThemes: getCustomThemes()
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
@@ -660,6 +670,8 @@ ipcMain.on('voice-user-count', (event, count) => {
             voiceSectionHeight: bounds.effectiveVoiceHeight,
             autoExpandVoice: true,
             theme: currentThemeVal,
+            highlightMessages: store.get('highlightMessages') !== false,
+            highlightKeywords: store.get('highlightKeywords') || '',
             customThemes: getCustomThemes()
         });
     }
@@ -713,7 +725,10 @@ function startWebSocketServer() {
                 const data = JSON.parse(message);
                 if (data.type === "MESSAGES_UPDATE") {
                     if (mainWindow) {
-                        mainWindow.webContents.send('messages-update', data.messages);
+                        mainWindow.webContents.send('messages-update', {
+                            messages: data.messages,
+                            myIdentifiers: data.myIdentifiers
+                        });
                     }
                 } else if (data.type === "TYPING_UPDATE") {
                     if (mainWindow) {
@@ -742,6 +757,8 @@ function startWebSocketServer() {
                             autoExpandVoice: store.get('autoExpandVoice') || false,
                             voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5,
                             theme: currentThemeVal,
+                            highlightMessages: store.get('highlightMessages') !== false,
+                            highlightKeywords: store.get('highlightKeywords') || '',
                             customThemes: getCustomThemes()
                         });
                     }

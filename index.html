@@ -61,6 +61,18 @@
             pointer-events: auto;
         }
 
+        .gaming-overlay-message.highlighted-message {
+            background-color: rgba(88, 101, 242, 0.35) !important;
+            border-left: 4px solid #5865F2 !important;
+            box-shadow: 0 0 12px rgba(88, 101, 242, 0.5), inset 0 0 10px rgba(88, 101, 242, 0.2);
+            animation: highlightPulse 2s infinite alternate;
+        }
+
+        @keyframes highlightPulse {
+            0% { border-left-color: #5865F2; box-shadow: 0 0 10px rgba(88, 101, 242, 0.4); }
+            100% { border-left-color: #00d2ff; box-shadow: 0 0 16px rgba(0, 210, 255, 0.6); }
+        }
+
         .gaming-overlay-author {
             font-weight: bold;
             margin-right: 6px;
@@ -438,6 +450,59 @@
         .gaming-overlay-container.theme-slate .voice-notif-item {
             background: rgba(15, 23, 42, 0.75) !important;
             border: 1px solid #334155;
+        }
+
+        /* Theme-specific Highlighted Message Accents */
+        .gaming-overlay-container.theme-oled .gaming-overlay-message.highlighted-message {
+            background-color: rgba(255, 255, 255, 0.12) !important;
+            border-left-color: #ffffff !important;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+        }
+        .gaming-overlay-container.theme-cyberpunk .gaming-overlay-message.highlighted-message {
+            background-color: rgba(255, 0, 128, 0.25) !important;
+            border-left-color: #ff007f !important;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.5);
+        }
+        .gaming-overlay-container.theme-synthwave .gaming-overlay-message.highlighted-message {
+            background-color: rgba(255, 42, 133, 0.25) !important;
+            border-left-color: #ff2a85 !important;
+            box-shadow: 0 0 12px rgba(255, 113, 206, 0.5);
+        }
+        .gaming-overlay-container.theme-glass .gaming-overlay-message.highlighted-message {
+            background-color: rgba(255, 255, 255, 0.25) !important;
+            border-left-color: #38bdf8 !important;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        .gaming-overlay-container.theme-vaporwave .gaming-overlay-message.highlighted-message {
+            background-color: rgba(255, 113, 206, 0.25) !important;
+            border-left-color: #01cdfe !important;
+            box-shadow: 0 0 12px rgba(255, 113, 206, 0.4);
+        }
+        .gaming-overlay-container.theme-emerald .gaming-overlay-message.highlighted-message {
+            background-color: rgba(16, 185, 129, 0.25) !important;
+            border-left-color: #facc15 !important;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
+        }
+        .gaming-overlay-container.theme-bloodmoon .gaming-overlay-message.highlighted-message {
+            background-color: rgba(220, 38, 38, 0.3) !important;
+            border-left-color: #ff4d4d !important;
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
+        }
+        .gaming-overlay-container.theme-aurora .gaming-overlay-message.highlighted-message {
+            background-color: rgba(6, 182, 212, 0.25) !important;
+            border-left-color: #a5f3fc !important;
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
+        }
+        .gaming-overlay-container.theme-matrix .gaming-overlay-message.highlighted-message {
+            background-color: rgba(0, 255, 102, 0.2) !important;
+            border-left-color: #00ff66 !important;
+            box-shadow: 0 0 14px rgba(0, 255, 102, 0.5);
+        }
+        .gaming-overlay-container.theme-slate .gaming-overlay-message.highlighted-message {
+            background-color: rgba(71, 85, 105, 0.5) !important;
+            border-left-color: #94a3b8 !important;
+            box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
         }
     </style>
 </head>
