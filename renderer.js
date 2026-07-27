@@ -100,6 +100,12 @@ ipcRenderer.on('set-msg-opacity', (event, msgOpacity) => {
     styleTag.innerHTML = `.gaming-overlay-message { background-color: rgba(0, 0, 0, ${msgOpacity}) !important; border-radius: 4px; padding: 4px; margin-bottom: 2px; }`;
 });
 
+ipcRenderer.on('set-typing-key', (event, typingKey) => {
+    if (chatInput) {
+        chatInput.placeholder = `Message... (Press ${typingKey} to close)`;
+    }
+});
+
 // Simple custom emoji parser: <:name:id> -> <img src="...">
 function parseCustomEmojis(text) {
     if (!text) return "";

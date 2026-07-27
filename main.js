@@ -165,6 +165,7 @@ function createWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.send('set-opacity', store.get('opacity'));
         mainWindow.webContents.send('set-msg-opacity', store.get('msgOpacity') || 0);
+        mainWindow.webContents.send('set-typing-key', (store.get('typingKey') || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: store.get('autoHide') !== false,
             autoHideDelay: store.get('autoHideDelay') || 20
@@ -452,6 +453,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     if (mainWindow) {
         mainWindow.webContents.send('set-opacity', newConfig.opacity);
         mainWindow.webContents.send('set-msg-opacity', newConfig.msgOpacity);
+        mainWindow.webContents.send('set-typing-key', (newConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: newConfig.autoHide,
             autoHideDelay: newConfig.autoHideDelay
@@ -487,6 +489,7 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
     if (mainWindow) {
         mainWindow.webContents.send('set-opacity', previewConfig.opacity);
         mainWindow.webContents.send('set-msg-opacity', previewConfig.msgOpacity);
+        mainWindow.webContents.send('set-typing-key', (previewConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: previewConfig.autoHide,
             autoHideDelay: previewConfig.autoHideDelay
