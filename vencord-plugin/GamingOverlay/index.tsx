@@ -106,6 +106,8 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
             FluxDispatcher.subscribe("MESSAGE_CREATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_UPDATE", handleMessageEvent);
             FluxDispatcher.subscribe("MESSAGE_DELETE", handleMessageEvent);
+            FluxDispatcher.subscribe("TYPING_START", handleTypingEvent);
+            FluxDispatcher.subscribe("TYPING_STOP", handleTypingEvent);
             FluxDispatcher.subscribe("VOICE_CHANNEL_SELECT", handleVoiceEvent);
             FluxDispatcher.subscribe("RTC_CONNECTION_STATE", handleVoiceEvent);
             FluxDispatcher.subscribe("CHANNEL_SELECT", handleVoiceEvent);
@@ -450,7 +452,39 @@ function sendVoiceToOverlay() {
 function handleMessageEvent() {
     setTimeout(() => {
         sendMessagesToOverlay();
+        sendTypingToOverlay();
     }, 200);
+}
+
+function sendTypingToOverlay() {
+    if (!activeChannelId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    
+    const TypingStore = findStore("TypingStore");
+    const typingObj = TypingStore ? TypingStore.getTypingUsers(activeChannelId) : {};
+    const typingIds = Object.keys(typingObj || {});
+    
+    const UserStore = findStore("UserStore");
+    const myId = UserStore?.getCurrentUser?.()?.id;
+    
+    const typingUsers = [];
+    for (const uid of typingIds) {
+        if (uid === myId) continue;
+        const u = UserStore ? UserStore.getUser(uid) : null;
+        if (u) {
+            typingUsers.push({ id: uid, username: u.globalName || u.username });
+        }
+    }
+    
+    ws.send(JSON.stringify({
+        type: "TYPING_UPDATE",
+        typingUsers
+    }));
+}
+
+function handleTypingEvent() {
+    ensureWebSocketConnected(() => {
+        sendTypingToOverlay();
+    });
 }
 
 function handleVoiceEvent(data?: any) {
@@ -533,6 +567,8 @@ function stopOverlayBridge() {
         FluxDispatcher.unsubscribe("MESSAGE_CREATE", handleMessageEvent);
         FluxDispatcher.unsubscribe("MESSAGE_UPDATE", handleMessageEvent);
         FluxDispatcher.unsubscribe("MESSAGE_DELETE", handleMessageEvent);
+        FluxDispatcher.unsubscribe("TYPING_START", handleTypingEvent);
+        FluxDispatcher.unsubscribe("TYPING_STOP", handleTypingEvent);
         FluxDispatcher.unsubscribe("VOICE_STATE_UPDATES", handleVoiceEvent);
         FluxDispatcher.unsubscribe("SPEAKING", handleSpeakingEvent);
     }

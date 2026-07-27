@@ -7,6 +7,7 @@ const msgOpacityVal = document.getElementById('msg-opacity-val');
 const autoHideInput = document.getElementById('auto-hide-input');
 const autoHideDelayInput = document.getElementById('auto-hide-delay-input');
 const deleteMessagesInput = document.getElementById('delete-messages-input');
+const typingKeepsAwakeInput = document.getElementById('typing-keeps-awake-input');
 const showTextSectionInput = document.getElementById('show-text-section-input');
 const showVoiceSectionInput = document.getElementById('show-voice-section-input');
 const showVoiceNotifsInput = document.getElementById('show-voice-notifs-input');
@@ -35,6 +36,7 @@ function sendLiveUpdate() {
         autoHide: autoHideInput.checked,
         autoHideDelay: parseInt(autoHideDelayInput.value),
         deleteMessages: deleteMessagesInput.checked,
+        typingKeepsAwake: typingKeepsAwakeInput ? typingKeepsAwakeInput.checked : true,
         showTextSection: showTextSectionInput.checked,
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,
@@ -105,6 +107,7 @@ autoHideInput.addEventListener('change', () => {
 autoHideDelayInput.addEventListener('change', sendLiveUpdate);
 autoHideDelayInput.addEventListener('input', sendLiveUpdate);
 deleteMessagesInput.addEventListener('change', sendLiveUpdate);
+if (typingKeepsAwakeInput) typingKeepsAwakeInput.addEventListener('change', sendLiveUpdate);
 showTextSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceSectionInput.addEventListener('change', sendLiveUpdate);
 showVoiceNotifsInput.addEventListener('change', sendLiveUpdate);
@@ -166,6 +169,9 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     autoHideInput.checked = config.autoHide !== false;
     autoHideDelayInput.value = config.autoHideDelay || 20;
     deleteMessagesInput.checked = config.deleteMessages !== false;
+    if (typingKeepsAwakeInput) {
+        typingKeepsAwakeInput.checked = config.typingKeepsAwake !== false;
+    }
     showTextSectionInput.checked = config.showTextSection !== false;
     showVoiceSectionInput.checked = config.showVoiceSection !== false;
     showVoiceNotifsInput.checked = config.showVoiceNotifs !== false;
@@ -223,6 +229,7 @@ saveBtn.addEventListener('click', () => {
         autoHide: autoHideInput.checked,
         autoHideDelay: parseInt(autoHideDelayInput.value),
         deleteMessages: deleteMessagesInput.checked,
+        typingKeepsAwake: typingKeepsAwakeInput ? typingKeepsAwakeInput.checked : true,
         showTextSection: showTextSectionInput.checked,
         showVoiceSection: showVoiceSectionInput.checked,
         showVoiceNotifs: showVoiceNotifsInput.checked,

@@ -21,6 +21,7 @@ const store = new Store({
         autoHide: true,
         autoHideDelay: 20,
         deleteMessages: true,
+        typingKeepsAwake: true,
         showTextSection: true,
         showVoiceSection: true,
         showVoiceNotifs: true,
@@ -170,7 +171,8 @@ function createWindow() {
         mainWindow.webContents.send('set-typing-key', (store.get('typingKey') || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: store.get('autoHide') !== false,
-            autoHideDelay: store.get('autoHideDelay') || 20
+            autoHideDelay: store.get('autoHideDelay') || 20,
+            typingKeepsAwake: store.get('typingKeepsAwake') !== false
         });
         mainWindow.webContents.send('set-sync-deleted', store.get('deleteMessages') !== false);
         mainWindow.webContents.send('set-sections-config', {
@@ -496,7 +498,8 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.webContents.send('set-typing-key', (newConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: newConfig.autoHide,
-            autoHideDelay: newConfig.autoHideDelay
+            autoHideDelay: newConfig.autoHideDelay,
+            typingKeepsAwake: newConfig.typingKeepsAwake
         });
         mainWindow.webContents.send('set-sync-deleted', newConfig.deleteMessages);
         mainWindow.webContents.send('set-sections-config', {
@@ -533,8 +536,9 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         mainWindow.webContents.send('set-msg-opacity', previewConfig.msgOpacity);
         mainWindow.webContents.send('set-typing-key', (previewConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
-            autoHide: previewConfig.autoHide,
-            autoHideDelay: previewConfig.autoHideDelay
+            autoHide: previewConfig.autoHide !== false,
+            autoHideDelay: previewConfig.autoHideDelay || 20,
+            typingKeepsAwake: previewConfig.typingKeepsAwake !== false
         });
         mainWindow.webContents.send('set-sync-deleted', previewConfig.deleteMessages);
         mainWindow.webContents.send('set-sections-config', {
@@ -640,6 +644,10 @@ function startWebSocketServer() {
                 if (data.type === "MESSAGES_UPDATE") {
                     if (mainWindow) {
                         mainWindow.webContents.send('messages-update', data.messages);
+                    }
+                } else if (data.type === "TYPING_UPDATE") {
+                    if (mainWindow) {
+                        mainWindow.webContents.send('typing-update', data.typingUsers);
                     }
                 } else if (data.type === "VOICE_UPDATE") {
                     if (mainWindow) {

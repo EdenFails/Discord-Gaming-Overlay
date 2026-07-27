@@ -9,6 +9,8 @@ let isTyping = false;
 let wasSpeakingValidly = false;
 let autoHide = true;
 let autoHideDelay = 20;
+let typingKeepsAwake = true;
+let isSomeoneTyping = false;
 let hideTimeout = null;
 let syncDeletedMessages = true;
 
@@ -65,7 +67,7 @@ function updateSectionsVisibility() {
 function resetHideTimer() {
     if (hideTimeout) clearTimeout(hideTimeout);
     
-    if (!autoHide || isTyping || wasSpeakingValidly) {
+    if (!autoHide || isTyping || wasSpeakingValidly || (typingKeepsAwake && isSomeoneTyping)) {
         container.style.opacity = 1;
         return;
     }
@@ -79,6 +81,9 @@ function resetHideTimer() {
 ipcRenderer.on('set-auto-hide', (event, config) => {
     autoHide = config.autoHide;
     autoHideDelay = config.autoHideDelay;
+    if (typeof config.typingKeepsAwake === 'boolean') {
+        typingKeepsAwake = config.typingKeepsAwake;
+    }
     resetHideTimer();
 });
 
@@ -154,6 +159,40 @@ ipcRenderer.on('toggle-typing', (event, typingMode) => {
     resetHideTimer();
 });
 
+ipcRenderer.on('typing-update', (event, users) => {
+    const typingContainer = document.getElementById('typing-container');
+    const typingText = document.getElementById('typing-text');
+    if (!typingContainer || !typingText) return;
+
+    if (!users || users.length === 0) {
+        typingContainer.style.display = 'none';
+        isSomeoneTyping = false;
+        resetHideTimer();
+        return;
+    }
+
+    isSomeoneTyping = true;
+    
+    // Store scroll state
+    const wasScrolledToBottom = Math.abs(messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) <= 5;
+
+    if (users.length === 1) {
+        typingText.textContent = `${users[0].username} is typing...`;
+    } else if (users.length === 2) {
+        typingText.textContent = `${users[0].username} and ${users[1].username} are typing...`;
+    } else {
+        typingText.textContent = 'Several people are typing...';
+    }
+
+    typingContainer.style.display = 'flex';
+    
+    if (wasScrolledToBottom) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    resetHideTimer();
+});
+
 let lastMessagesJson = '';
 let lastSeenMessageId = null;
 let audioCtx = null;
@@ -221,6 +260,9 @@ ipcRenderer.on('messages-update', (event, messages) => {
         }
         lastSeenMessageId = newestMsg.id;
     }
+    
+    // Store current scroll pos to see if we're at bottom
+    const wasScrolledToBottom = Math.abs(messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) <= 5;
     
     messagesContainer.innerHTML = '';
     
@@ -379,8 +421,10 @@ ipcRenderer.on('messages-update', (event, messages) => {
         messagesContainer.appendChild(msgDiv);
     });
     
-    // Auto scroll to bottom
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (wasScrolledToBottom) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
     resetHideTimer();
 });
 
