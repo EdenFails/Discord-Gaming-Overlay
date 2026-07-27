@@ -18,6 +18,7 @@ const textHeightInput = document.getElementById('text-height-input');
 const voiceHeightInput = document.getElementById('voice-height-input');
 const autoExpandVoiceInput = document.getElementById('auto-expand-voice-input');
 const voiceSortInput = document.getElementById('voice-sort-input');
+const themeInput = document.getElementById('theme-input');
 const displayInput = document.getElementById('display-input');
 const positionInput = document.getElementById('position-input');
 const visibilityKeyInput = document.getElementById('visibility-key-input');
@@ -46,6 +47,7 @@ function sendLiveUpdate() {
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
+        theme: themeInput ? themeInput.value : 'default',
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
         messageChimeEnabled: messageChimeInput.checked,
@@ -66,9 +68,7 @@ msgOpacityInput.addEventListener('input', () => {
 
 if (voiceThresholdInput) {
     voiceThresholdInput.addEventListener('input', () => {
-        if (voiceThresholdVal) {
-            voiceThresholdVal.textContent = parseFloat(voiceThresholdInput.value).toFixed(1) + 's';
-        }
+        if (voiceThresholdVal) voiceThresholdVal.textContent = `${voiceThresholdInput.value}s`;
         sendLiveUpdate();
     });
 }
@@ -116,7 +116,8 @@ textHeightInput.addEventListener('input', sendLiveUpdate);
 textHeightInput.addEventListener('change', sendLiveUpdate);
 voiceHeightInput.addEventListener('input', sendLiveUpdate);
 voiceHeightInput.addEventListener('change', sendLiveUpdate);
-voiceSortInput.addEventListener('change', sendLiveUpdate);
+if (voiceSortInput) voiceSortInput.addEventListener('change', sendLiveUpdate);
+if (themeInput) themeInput.addEventListener('change', sendLiveUpdate);
 if (messageChimeInput) messageChimeInput.addEventListener('change', sendLiveUpdate);
 
 // Keybind listener logic
@@ -179,14 +180,36 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     if (voiceThresholdInput) {
         const thresholdVal = typeof config.voiceSpeakingThreshold === 'number' ? config.voiceSpeakingThreshold : 0.5;
         voiceThresholdInput.value = thresholdVal;
-        if (voiceThresholdVal) voiceThresholdVal.textContent = thresholdVal.toFixed(1) + 's';
+        if (voiceThresholdVal) voiceThresholdVal.textContent = `${thresholdVal}s`;
     }
     textHeightInput.value = config.textSectionHeight || 140;
     voiceHeightInput.value = config.voiceSectionHeight || 250;
     autoExpandVoiceInput.checked = Boolean(config.autoExpandVoice);
     updateVoiceHeightDisabledState();
     updateAutoHideDisabledState();
-    voiceSortInput.value = config.voiceSortOrder || 'friends';
+    if (voiceSortInput) voiceSortInput.value = config.voiceSortOrder || 'friends';
+    if (themeInput) {
+        if (Array.isArray(data.customThemes) && data.customThemes.length > 0) {
+            let customGroup = themeInput.querySelector('optgroup[label="Custom Themes"]');
+            if (!customGroup) {
+                customGroup = document.createElement('optgroup');
+                customGroup.label = "Custom Themes (from /themes folder)";
+                themeInput.appendChild(customGroup);
+            }
+            customGroup.innerHTML = '';
+            data.customThemes.forEach(ct => {
+                const opt = document.createElement('option');
+                opt.value = ct.id;
+                opt.textContent = ct.displayName;
+                customGroup.appendChild(opt);
+            });
+        }
+        const targetTheme = config.theme || 'default';
+        themeInput.value = targetTheme;
+        Array.from(themeInput.options).forEach(opt => {
+            opt.selected = (opt.value === targetTheme);
+        });
+    }
 
     positionInput.value = config.position;
     visibilityKeyInput.value = config.visibilityKey;
@@ -239,6 +262,7 @@ saveBtn.addEventListener('click', () => {
         voiceSectionHeight: parseInt(voiceHeightInput.value) || 250,
         autoExpandVoice: autoExpandVoiceInput.checked,
         voiceSortOrder: voiceSortInput.value,
+        theme: themeInput ? themeInput.value : 'default',
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
@@ -258,3 +282,6 @@ saveBtn.addEventListener('click', () => {
 
     ipcRenderer.send('save-settings', newConfig);
 });
+
+// Request settings from main process immediately on script load
+ipcRenderer.send('request-settings');

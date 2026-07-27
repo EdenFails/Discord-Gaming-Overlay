@@ -4,6 +4,45 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const Store = require('./store');
 
+function formatThemeName(filename) {
+    const base = filename.replace(/\.[^/.]+$/, "");
+    return base
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .trim();
+}
+
+function getCustomThemes() {
+    const themesDir = path.join(__dirname, 'themes');
+    if (!fs.existsSync(themesDir)) {
+        try { fs.mkdirSync(themesDir, { recursive: true }); } catch (e) {}
+    }
+
+    const customThemes = [];
+    try {
+        const files = fs.readdirSync(themesDir);
+        files.forEach(file => {
+            if (file.startsWith('_') || file.endsWith('.example')) return;
+            const ext = path.extname(file).toLowerCase();
+            if (ext === '.css' || ext === '.txt' || ext === '.theme') {
+                const fullPath = path.join(themesDir, file);
+                const content = fs.readFileSync(fullPath, 'utf-8');
+                const displayName = formatThemeName(file);
+                customThemes.push({
+                    id: `custom:${file}`,
+                    displayName: displayName,
+                    filename: file,
+                    cssContent: content
+                });
+            }
+        });
+    } catch (e) {}
+    return customThemes;
+}
+
 // Disable hardware acceleration on Linux to prevent Mesa DRI GPU crashes (exit_code=139)
 if (process.platform === 'linux') {
     app.disableHardwareAcceleration();
@@ -36,7 +75,8 @@ const store = new Store({
         visibilityKey: 'Ctrl+Shift+H',
         typingKey: 'Ctrl+Shift+Enter',
         messageChimeEnabled: true,
-        messageChimeCooldown: 5
+        messageChimeCooldown: 5,
+        theme: 'default'
     }
 });
 
@@ -58,6 +98,7 @@ function updateVencordPlugin() {
 
 let mainWindow;
 let settingsWindow;
+let activePreviewConfig = null;
 let tray = null;
 let typingMode = false;
 let isOverlayVisible = true;
@@ -166,39 +207,45 @@ function createWindow() {
     
     // Set initial opacity when ready
     mainWindow.webContents.on('did-finish-load', () => {
-        mainWindow.webContents.send('set-opacity', store.get('opacity'));
-        mainWindow.webContents.send('set-msg-opacity', store.get('msgOpacity') || 0);
-        mainWindow.webContents.send('set-typing-key', (store.get('typingKey') || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
-        mainWindow.webContents.send('set-auto-hide', {
-            autoHide: store.get('autoHide') !== false,
-            autoHideDelay: store.get('autoHideDelay') || 20,
-            typingKeepsAwake: store.get('typingKeepsAwake') !== false
-        });
-        mainWindow.webContents.send('set-sync-deleted', store.get('deleteMessages') !== false);
-        mainWindow.webContents.send('set-sections-config', {
-            showTextSection: store.get('showTextSection') !== false,
-            showVoiceSection: store.get('showVoiceSection') !== false,
-            showVoiceNotifs: store.get('showVoiceNotifs') !== false,
-            messageChimeEnabled: store.get('messageChimeEnabled') !== false,
-            messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
-            textSectionHeight: store.get('textSectionHeight') || 140,
-            voiceSectionHeight: store.get('voiceSectionHeight') || 250,
-            autoExpandVoice: store.get('autoExpandVoice') || false,
-            voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5
-        });
-        mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
-
-        // Apply saved window height bounds immediately on launch
-        const initDisplay = getSelectedDisplay(store.get('displayId'));
-        const initBounds = calculateWindowPosition(
-            initDisplay,
-            store.get('position'),
-            store.get('textSectionHeight'),
-            store.get('voiceSectionHeight'),
-            store.get('autoExpandVoice')
-        );
-        mainWindow.setBounds(initBounds);
+        broadcastSavedConfigToOverlay();
     });
+}
+
+function broadcastSavedConfigToOverlay() {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('set-opacity', store.get('opacity'));
+    mainWindow.webContents.send('set-msg-opacity', store.get('msgOpacity') || 0);
+    mainWindow.webContents.send('set-typing-key', (store.get('typingKey') || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
+    mainWindow.webContents.send('set-auto-hide', {
+        autoHide: store.get('autoHide') !== false,
+        autoHideDelay: store.get('autoHideDelay') || 20,
+        typingKeepsAwake: store.get('typingKeepsAwake') !== false
+    });
+    mainWindow.webContents.send('set-sync-deleted', store.get('deleteMessages') !== false);
+    mainWindow.webContents.send('set-sections-config', {
+        showTextSection: store.get('showTextSection') !== false,
+        showVoiceSection: store.get('showVoiceSection') !== false,
+        showVoiceNotifs: store.get('showVoiceNotifs') !== false,
+        messageChimeEnabled: store.get('messageChimeEnabled') !== false,
+        messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
+        textSectionHeight: store.get('textSectionHeight') || 140,
+        voiceSectionHeight: store.get('voiceSectionHeight') || 250,
+        autoExpandVoice: store.get('autoExpandVoice') || false,
+        voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5,
+        theme: store.get('theme') || 'default',
+        customThemes: getCustomThemes()
+    });
+    mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
+
+    const initDisplay = getSelectedDisplay(store.get('displayId'));
+    const initBounds = calculateWindowPosition(
+        initDisplay,
+        store.get('position'),
+        store.get('textSectionHeight'),
+        store.get('voiceSectionHeight'),
+        store.get('autoExpandVoice')
+    );
+    mainWindow.setBounds(initBounds);
 }
 
 function createSettingsWindow() {
@@ -224,14 +271,27 @@ function createSettingsWindow() {
     settingsWindow.webContents.on('did-finish-load', () => {
         settingsWindow.webContents.send('load-settings', {
             config: store.getAll(),
-            displays: screen.getAllDisplays()
+            displays: screen.getAllDisplays(),
+            customThemes: getCustomThemes()
         });
     });
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
+        activePreviewConfig = null;
+        broadcastSavedConfigToOverlay();
     });
 }
+
+ipcMain.on('request-settings', (event) => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.webContents.send('load-settings', {
+            config: store.getAll(),
+            displays: screen.getAllDisplays(),
+            customThemes: getCustomThemes()
+        });
+    }
+});
 
 const { uIOhook, UiohookKey } = require('uiohook-napi');
 
@@ -486,6 +546,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('autoExpandVoice', newConfig.autoExpandVoice);
     store.set('autoMonitorVoice', newConfig.autoMonitorVoice);
     store.set('voiceSpeakingThreshold', newConfig.voiceSpeakingThreshold);
+    store.set('theme', newConfig.theme || 'default');
     store.set('displayId', newConfig.displayId);
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
@@ -511,7 +572,9 @@ ipcMain.on('save-settings', (event, newConfig) => {
             textSectionHeight: newConfig.textSectionHeight || 140,
             voiceSectionHeight: newConfig.voiceSectionHeight || 250,
             autoExpandVoice: newConfig.autoExpandVoice || false,
-            voiceSpeakingThreshold: typeof newConfig.voiceSpeakingThreshold === 'number' ? newConfig.voiceSpeakingThreshold : 0.5
+            voiceSpeakingThreshold: typeof newConfig.voiceSpeakingThreshold === 'number' ? newConfig.voiceSpeakingThreshold : 0.5,
+            theme: newConfig.theme || 'default',
+            customThemes: getCustomThemes()
         });
         mainWindow.webContents.send('set-voice-sort', newConfig.voiceSortOrder || 'friends');
         
@@ -525,12 +588,14 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.setBounds(bounds);
     }
 
+    activePreviewConfig = null;
     updateVencordPlugin();
     broadcastConfigToPlugin();
     updateShortcuts();
 });
 
 ipcMain.on('preview-settings', (event, previewConfig) => {
+    activePreviewConfig = previewConfig;
     if (mainWindow) {
         mainWindow.webContents.send('set-opacity', previewConfig.opacity);
         mainWindow.webContents.send('set-msg-opacity', previewConfig.msgOpacity);
@@ -550,7 +615,9 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
             textSectionHeight: previewConfig.textSectionHeight || 140,
             voiceSectionHeight: previewConfig.voiceSectionHeight || 250,
             autoExpandVoice: previewConfig.autoExpandVoice || false,
-            voiceSpeakingThreshold: typeof previewConfig.voiceSpeakingThreshold === 'number' ? previewConfig.voiceSpeakingThreshold : 0.5
+            voiceSpeakingThreshold: typeof previewConfig.voiceSpeakingThreshold === 'number' ? previewConfig.voiceSpeakingThreshold : 0.5,
+            theme: previewConfig.theme || 'default',
+            customThemes: getCustomThemes()
         });
         mainWindow.webContents.send('set-voice-sort', previewConfig.voiceSortOrder || 'friends');
         
@@ -582,6 +649,7 @@ ipcMain.on('voice-user-count', (event, count) => {
         if (curr.x !== bounds.x || curr.y !== bounds.y || curr.width !== bounds.width || curr.height !== bounds.height) {
             mainWindow.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
         }
+        const currentThemeVal = activePreviewConfig ? activePreviewConfig.theme : (store.get('theme') || 'default');
         mainWindow.webContents.send('set-sections-config', {
             showTextSection: store.get('showTextSection') !== false,
             showVoiceSection: store.get('showVoiceSection') !== false,
@@ -590,7 +658,9 @@ ipcMain.on('voice-user-count', (event, count) => {
             messageChimeCooldown: typeof store.get('messageChimeCooldown') === 'number' ? store.get('messageChimeCooldown') : 5,
             textSectionHeight: store.get('textSectionHeight') || 140,
             voiceSectionHeight: bounds.effectiveVoiceHeight,
-            autoExpandVoice: true
+            autoExpandVoice: true,
+            theme: currentThemeVal,
+            customThemes: getCustomThemes()
         });
     }
 });
@@ -660,6 +730,7 @@ function startWebSocketServer() {
                         store.set('showVoiceSection', true);
                     }
                     if (mainWindow) {
+                        const currentThemeVal = activePreviewConfig ? activePreviewConfig.theme : (store.get('theme') || 'default');
                         mainWindow.webContents.send('set-sections-config', {
                             showTextSection: store.get('showTextSection') !== false,
                             showVoiceSection: store.get('showVoiceSection') !== false,
@@ -669,7 +740,9 @@ function startWebSocketServer() {
                             textSectionHeight: store.get('textSectionHeight') || 140,
                             voiceSectionHeight: store.get('voiceSectionHeight') || 250,
                             autoExpandVoice: store.get('autoExpandVoice') || false,
-                            voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5
+                            voiceSpeakingThreshold: typeof store.get('voiceSpeakingThreshold') === 'number' ? store.get('voiceSpeakingThreshold') : 0.5,
+                            theme: currentThemeVal,
+                            customThemes: getCustomThemes()
                         });
                     }
                 } else if (data.type === "DEBUG_LOG") {

@@ -30,8 +30,44 @@ ipcRenderer.on('set-sections-config', (event, config) => {
     if (typeof config.voiceSpeakingThreshold === 'number') {
         voiceSpeakingThreshold = config.voiceSpeakingThreshold;
     }
+    if (config.theme) {
+        applyTheme(config.theme, config.customThemes);
+    }
     updateSectionsVisibility();
+    if (typeof lastVoiceData !== 'undefined' && lastVoiceData) {
+        renderVoiceOverlay(lastVoiceData);
+    }
 });
+
+let currentTheme = 'default';
+
+function applyTheme(themeName, customThemes) {
+    currentTheme = themeName || 'default';
+    if (!container) return;
+
+    Array.from(container.classList).forEach(cls => {
+        if (cls.startsWith('theme-')) {
+            container.classList.remove(cls);
+        }
+    });
+
+    let styleTag = document.getElementById('custom-theme-style');
+    if (styleTag) {
+        styleTag.remove();
+    }
+
+    if (currentTheme.startsWith('custom:')) {
+        const customThemeObj = Array.isArray(customThemes) ? customThemes.find(ct => ct.id === currentTheme) : null;
+        if (customThemeObj && customThemeObj.cssContent) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'custom-theme-style';
+            styleTag.textContent = customThemeObj.cssContent;
+            document.head.appendChild(styleTag);
+        }
+    } else if (currentTheme !== 'default') {
+        container.classList.add(`theme-${currentTheme}`);
+    }
+}
 
 function updateSectionsVisibility() {
     const textSection = document.getElementById('text-section');
