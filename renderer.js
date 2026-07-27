@@ -6,6 +6,7 @@ const inputContainer = document.getElementById('input-container');
 const chatInput = document.getElementById('chat-input');
 
 let isTyping = false;
+let wasSpeakingValidly = false;
 let autoHide = true;
 let autoHideDelay = 20;
 let hideTimeout = null;
@@ -64,7 +65,7 @@ function updateSectionsVisibility() {
 function resetHideTimer() {
     if (hideTimeout) clearTimeout(hideTimeout);
     
-    if (!autoHide || isTyping) {
+    if (!autoHide || isTyping || wasSpeakingValidly) {
         container.style.opacity = 1;
         return;
     }
@@ -466,30 +467,38 @@ ipcRenderer.on('voice-update', (event, data) => {
         lastVoiceUpdateJson = currentVoiceJson;
 
         const thresholdMs = (voiceSpeakingThreshold || 0.5) * 1000;
+        let isSpeakingValidly = false;
 
         if (hasSpeakingUser) {
             if (maxSpeakingDuration >= thresholdMs) {
-                resetHideTimer();
-            } else {
-                if (speakingThresholdTimer) clearTimeout(speakingThresholdTimer);
-                const remainingMs = Math.max(50, thresholdMs - maxSpeakingDuration);
-                speakingThresholdTimer = setTimeout(() => {
-                    const checkNow = Date.now();
-                    const stillSpeaking = Object.values(speakingStartTimestamps).some(start => (checkNow - start) >= thresholdMs);
-                    if (stillSpeaking) {
-                        resetHideTimer();
-                    }
-                }, remainingMs);
-                
-                // If there's also a major change (like someone joined while another is speaking briefly), we should still unhide
-                if (isMajorChange) {
+                isSpeakingValidly = true;
+            }
+        }
+
+        if (isSpeakingValidly) {
+            wasSpeakingValidly = true;
+            resetHideTimer();
+        } else if (hasSpeakingUser) {
+            if (speakingThresholdTimer) clearTimeout(speakingThresholdTimer);
+            const remainingMs = Math.max(50, thresholdMs - maxSpeakingDuration);
+            speakingThresholdTimer = setTimeout(() => {
+                const checkNow = Date.now();
+                const stillSpeaking = Object.values(speakingStartTimestamps).some(start => (checkNow - start) >= thresholdMs);
+                if (stillSpeaking) {
+                    wasSpeakingValidly = true;
                     resetHideTimer();
                 }
+            }, remainingMs);
+            
+            if (isMajorChange) {
+                resetHideTimer();
             }
         } else {
-            // No one is speaking. Only unhide if it's a major change (join/leave/mute)
-            // Or if the overlay is CURRENTLY visible, we want to reset the timer to start the fade out delay
-            if (isMajorChange || container.style.opacity == 1) {
+            if (isMajorChange) {
+                wasSpeakingValidly = false;
+                resetHideTimer();
+            } else if (wasSpeakingValidly) {
+                wasSpeakingValidly = false;
                 resetHideTimer();
             }
         }
