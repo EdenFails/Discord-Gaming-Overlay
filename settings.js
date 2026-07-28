@@ -236,6 +236,14 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
         chimeCooldownInput.value = config.messageChimeCooldown ?? 5;
         if (chimeCooldownVal) chimeCooldownVal.textContent = (config.messageChimeCooldown ?? 5) + 's';
     }
+    if (bgContainerInput) bgContainerInput.value = config.bgContainer || '';
+    if (bgTextInput) bgTextInput.value = config.bgText || '';
+    if (bgVoiceInput) bgVoiceInput.value = config.bgVoice || '';
+    if (bgOpacityInput) {
+        const op = typeof config.bgOpacity === 'number' ? Math.round(config.bgOpacity * 100) : 80;
+        bgOpacityInput.value = op;
+        if (bgOpacityVal) bgOpacityVal.textContent = `${op}%`;
+    }
     
     // Populate displays
     displayInput.innerHTML = '';
