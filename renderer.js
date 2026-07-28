@@ -700,7 +700,7 @@ function renderVoiceOverlay(data) {
     const voiceNotifsContainer = document.getElementById('voice-notifs-container');
     if (!voiceUsersContainer || !voiceNotifsContainer) return;
 
-    // Render Notifications (Newest notification at the bottom)
+    // Render Notifications (Newest 3 notifications, newest at the bottom)
     voiceNotifsContainer.innerHTML = '';
     if (data.eventLogs && data.eventLogs.length > 0) {
         data.eventLogs.slice(0, 3).reverse().forEach(log => {
@@ -709,7 +709,6 @@ function renderVoiceOverlay(data) {
             notifDiv.textContent = log.text;
             voiceNotifsContainer.appendChild(notifDiv);
         });
-        voiceNotifsContainer.scrollTop = voiceNotifsContainer.scrollHeight;
     }
 
     // Render Connected Voice Users (Sorted)
