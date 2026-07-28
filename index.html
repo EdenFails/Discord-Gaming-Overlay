@@ -109,12 +109,12 @@
         }
 
         .gaming-overlay-attachment {
-            max-width: 120px;
-            max-height: 100px;
+            max-width: 120px !important;
+            max-height: 100px !important;
             border-radius: 6px;
             margin-top: 4px;
             display: block;
-            object-fit: cover;
+            object-fit: cover !important;
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
@@ -503,11 +503,105 @@
             background-color: rgba(71, 85, 105, 0.5) !important;
             border-left-color: #94a3b8 !important;
             box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
+        .pinned-banner-container {
+            display: none;
+            background: rgba(88, 101, 242, 0.22);
+            border: 1px solid rgba(88, 101, 242, 0.5);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            position: relative;
+            max-height: 160px !important;
+            overflow: hidden !important;
+            box-sizing: border-box;
+            animation: fadeInDown 0.3s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pinned-banner-header {
+            margin-bottom: 2px;
+        }
+
+        .pinned-banner-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5865F2;
+        }
+
+        .pinned-banner-body-flex {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 10px !important;
+            align-items: flex-start !important;
+            margin-top: 2px;
+        }
+
+        .pinned-banner-image {
+            width: 110px !important;
+            height: 110px !important;
+            min-width: 110px !important;
+            max-width: 110px !important;
+            max-height: 110px !important;
+            border-radius: 8px;
+            object-fit: cover !important;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            display: block;
+            flex-shrink: 0 !important;
+        }
+
+        .pinned-banner-text-col {
+            flex: 1 !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+        }
+
+        .pinned-banner-author {
+            font-size: 11px;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pinned-banner-content {
+            font-size: 12px;
+            color: #ffffff;
+            word-wrap: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.25;
         }
     </style>
 </head>
 <body>
     <div class="gaming-overlay-container" id="container">
+        
+        <!-- Pinned Announcement Bar -->
+        <div class="pinned-banner-container" id="pinned-banner-container">
+            <div class="pinned-banner-header">
+                <span class="pinned-banner-title">Pinned Message</span>
+            </div>
+            <div class="pinned-banner-author" id="pinned-banner-author"></div>
+            <div id="pinned-banner-body" class="pinned-banner-body-flex">
+                <img class="pinned-banner-image" id="pinned-banner-image" style="display: none; width: 110px !important; height: 110px !important; max-width: 110px !important; max-height: 110px !important; object-fit: cover !important; flex-shrink: 0 !important;" src="" alt="Thumbnail">
+                <div class="pinned-banner-text-col">
+                    <div class="pinned-banner-content" id="pinned-banner-content"></div>
+                </div>
+            </div>
+        </div>
         
         <!-- Text Chat Section -->
         <div id="text-section" style="display: none;">

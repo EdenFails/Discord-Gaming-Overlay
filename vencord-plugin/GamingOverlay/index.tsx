@@ -693,6 +693,68 @@ function patchUserContextMenu(children: any[], props: any) {
     );
 }
 
+let currentPinnedMessageId: string | null = null;
+
+function patchMessageContextMenu(children: any[], props: any) {
+    if (!props || !props.message) return;
+    const msg = props.message;
+
+    const isPinned = (currentPinnedMessageId === msg.id);
+
+    children.push(
+        <Menu.MenuGroup key="gaming-overlay-group-message-pin">
+            <Menu.MenuItem 
+                id="gaming-overlay-pin-message" 
+                label={isPinned ? "Unpin Message from Overlay" : "Pin Message to Overlay"} 
+                action={() => {
+                    ensureWebSocketConnected();
+                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                        try { showToast("Overlay app is not running", Toasts.Type.FAILURE); } catch(e) {}
+                        return;
+                    }
+
+                    if (isPinned) {
+                        currentPinnedMessageId = null;
+                        ws.send(JSON.stringify({ type: "PIN_MESSAGE", pinnedMessage: null }));
+                        try { showToast("Message Unpinned from Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                    } else {
+                        currentPinnedMessageId = msg.id;
+
+                        const author = msg.author || {};
+                        let imgUrl = null;
+                        if (msg.attachments && msg.attachments.length > 0) {
+                            imgUrl = msg.attachments[0].proxy_url || msg.attachments[0].url;
+                        } else if (msg.embeds && msg.embeds.length > 0) {
+                            const e = msg.embeds[0];
+                            if (e.image) imgUrl = e.image.proxyURL || e.image.url;
+                            else if (e.thumbnail) imgUrl = e.thumbnail.proxyURL || e.thumbnail.url;
+                        }
+
+                        let embedDesc = null;
+                        if (msg.embeds && msg.embeds.length > 0) {
+                            const e0 = msg.embeds[0];
+                            embedDesc = e0.description || e0.title || null;
+                        }
+
+                        const pinnedPayload = {
+                            id: msg.id,
+                            content: msg.content || "",
+                            embedDescription: embedDesc,
+                            authorName: author.globalName || author.username || "User",
+                            authorColor: msg.colorString || "#5865F2",
+                            imageUrl: imgUrl,
+                            timestamp: Date.now()
+                        };
+
+                        ws.send(JSON.stringify({ type: "PIN_MESSAGE", pinnedMessage: pinnedPayload }));
+                        try { showToast("Message Pinned to Overlay", Toasts.Type.SUCCESS); } catch(e) {}
+                    }
+                }} 
+            />
+        </Menu.MenuGroup>
+    );
+}
+
 export default definePlugin({
     name: "GamingOverlay",
     description: "Acts as a data bridge to the standalone Gaming Overlay external app.",
@@ -702,11 +764,13 @@ export default definePlugin({
         addContextMenuPatch("channel-context", patchChannelContextMenu);
         addContextMenuPatch("gdm-context", patchChannelContextMenu);
         addContextMenuPatch("user-context", patchUserContextMenu);
+        addContextMenuPatch("message", patchMessageContextMenu);
     },
     stop() {
         removeContextMenuPatch("channel-context");
         removeContextMenuPatch("gdm-context");
         removeContextMenuPatch("user-context");
+        removeContextMenuPatch("message");
         stopOverlayBridge();
     }
 });

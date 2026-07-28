@@ -127,7 +127,9 @@ function calculateWindowPosition(display, pos, textHeight = 140, voiceHeight = 2
         effectiveVoiceHeight = Math.min(maxAvail, Math.max(120, needed));
     }
 
-    const totalRequired = (textHeight || 140) + effectiveVoiceHeight + 130;
+    const hasPinned = Boolean(store.get('pinnedMessage'));
+    const pinnedOffset = hasPinned ? 70 : 0;
+    const totalRequired = (textHeight || 140) + effectiveVoiceHeight + pinnedOffset + 130;
     const winHeight = Math.min(bounds.height - 40, Math.max(300, totalRequired));
     const padding = 20;
     
@@ -239,6 +241,7 @@ function broadcastSavedConfigToOverlay() {
         highlightKeywords: store.get('highlightKeywords') || '',
         customThemes: getCustomThemes()
     });
+    mainWindow.webContents.send('pinned-message-update', store.get('pinnedMessage') || null);
     mainWindow.webContents.send('set-voice-sort', store.get('voiceSortOrder') || 'friends');
 
     const initDisplay = getSelectedDisplay(store.get('displayId'));
@@ -734,6 +737,12 @@ function startWebSocketServer() {
                     if (mainWindow) {
                         mainWindow.webContents.send('typing-update', data.typingUsers);
                     }
+                } else if (data.type === "PIN_MESSAGE") {
+                    store.set('pinnedMessage', data.pinnedMessage);
+                    if (mainWindow) {
+                        mainWindow.webContents.send('pinned-message-update', data.pinnedMessage);
+                        updateWindowBoundsForPin();
+                    }
                 } else if (data.type === "VOICE_UPDATE") {
                     if (mainWindow) {
                         mainWindow.webContents.send('voice-update', data);
@@ -847,6 +856,51 @@ app.whenReady().then(() => {
     createWindow();
     updateShortcuts();
     startWebSocketServer();
+});
+
+function updateWindowBoundsForPin() {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const targetDisplay = getSelectedDisplay(store.get('displayId'));
+    const bounds = calculateWindowPosition(
+        targetDisplay,
+        store.get('position'),
+        store.get('textSectionHeight'),
+        store.get('voiceSectionHeight'),
+        store.get('autoExpandVoice')
+    );
+    mainWindow.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
+}
+
+ipcMain.on('resize-overlay', (event, contentHeight) => {
+    if (!mainWindow || mainWindow.isDestroyed() || !contentHeight) return;
+    const targetDisplay = getSelectedDisplay(store.get('displayId'));
+    const bounds = targetDisplay.bounds;
+    const padding = 20;
+    const winWidth = 350;
+    const maxAvail = bounds.height - 40;
+    
+    const targetHeight = Math.min(maxAvail, Math.max(180, Math.ceil(contentHeight) + 20));
+    const curr = mainWindow.getBounds();
+
+    let x = curr.x;
+    let y = curr.y;
+    const pos = store.get('position') || 'top-right';
+
+    if (pos.includes('bottom')) {
+        y = bounds.y + bounds.height - targetHeight - padding;
+    }
+
+    if (Math.abs(curr.height - targetHeight) > 3 || curr.y !== y) {
+        mainWindow.setBounds({ x, y, width: winWidth, height: targetHeight });
+    }
+});
+
+ipcMain.on('unpin-message', () => {
+    store.set('pinnedMessage', null);
+    if (mainWindow) {
+        mainWindow.webContents.send('pinned-message-update', null);
+        updateWindowBoundsForPin();
+    }
 });
 
 app.on('window-all-closed', () => {
