@@ -101,18 +101,25 @@ function updateSectionsVisibility() {
     notifyContentResize();
 }
 
+let typingAutoClearTimer = null;
+
 function resetHideTimer() {
     if (hideTimeout) clearTimeout(hideTimeout);
     
     if (!autoHide || isTyping || wasSpeakingValidly || (typingKeepsAwake && isSomeoneTyping)) {
-        container.style.opacity = 1;
+        container.style.opacity = '1';
         return;
     }
     
-    container.style.opacity = 1;
+    container.style.opacity = '1';
+    const delaySec = typeof autoHideDelay === 'number' ? autoHideDelay : 20;
+    const delayMs = Math.max(100, delaySec * 1000);
+
     hideTimeout = setTimeout(() => {
-        container.style.opacity = 0;
-    }, autoHideDelay * 1000);
+        if (autoHide && !isTyping && !wasSpeakingValidly && !(typingKeepsAwake && isSomeoneTyping)) {
+            container.style.opacity = '0';
+        }
+    }, delayMs);
 }
 
 ipcRenderer.on('set-auto-hide', (event, config) => {
@@ -211,6 +218,8 @@ ipcRenderer.on('typing-update', (event, users) => {
     const typingText = document.getElementById('typing-text');
     if (!typingContainer || !typingText) return;
 
+    if (typingAutoClearTimer) clearTimeout(typingAutoClearTimer);
+
     if (!users || users.length === 0) {
         typingContainer.style.display = 'none';
         isSomeoneTyping = false;
@@ -219,6 +228,13 @@ ipcRenderer.on('typing-update', (event, users) => {
     }
 
     isSomeoneTyping = true;
+
+    // Auto clear stuck typing status after 6s in case Discord doesn't emit typing stop
+    typingAutoClearTimer = setTimeout(() => {
+        isSomeoneTyping = false;
+        typingContainer.style.display = 'none';
+        resetHideTimer();
+    }, 6000);
     
     // Store scroll state
     const wasScrolledToBottom = Math.abs(messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) <= 5;
@@ -743,6 +759,12 @@ function renderVoiceOverlay(data) {
         }
         if (user.isLive) {
             badgesDiv.innerHTML += '<span class="voice-badge live">LIVE</span>';
+        }
+
+        if (user.isSoftDeafened) {
+            badgesDiv.innerHTML += '<span class="voice-badge soft-deafen" title="Soft Deafened (Local Audio & Mic Mute)">🎧 Soft Deafened</span>';
+        } else if (user.isSoftMuted) {
+            badgesDiv.innerHTML += '<span class="voice-badge soft-mute" title="Soft Muted (Local Mic Mute)">🎙 Soft Muted</span>';
         }
 
         if (user.isForceDeafened) {

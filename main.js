@@ -222,7 +222,7 @@ function broadcastSavedConfigToOverlay() {
     mainWindow.webContents.send('set-typing-key', (store.get('typingKey') || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
     mainWindow.webContents.send('set-auto-hide', {
         autoHide: store.get('autoHide') !== false,
-        autoHideDelay: store.get('autoHideDelay') || 20,
+        autoHideDelay: typeof store.get('autoHideDelay') === 'number' ? store.get('autoHideDelay') : 20,
         typingKeepsAwake: store.get('typingKeepsAwake') !== false
     });
     mainWindow.webContents.send('set-sync-deleted', store.get('deleteMessages') !== false);
@@ -332,6 +332,18 @@ uIOhook.on('keydown', (e) => {
     }
 });
 
+let softMuteActive = false;
+let softDeafenActive = false;
+
+function sendPluginWspayload(payloadObj) {
+    if (wss) {
+        const payload = JSON.stringify(payloadObj);
+        wss.clients.forEach(client => {
+            if (client.readyState === 1) client.send(payload);
+        });
+    }
+}
+
 uIOhook.on('keyup', (e) => {
     if (isRecordingHotkey && pressedKeys.size > 0 && settingsWindow) {
         isRecordingHotkey = false;
@@ -340,6 +352,7 @@ uIOhook.on('keyup', (e) => {
 
     const keyName = getKeyName(e.keycode);
     if (keyName) pressedKeys.delete(keyName);
+    checkHotkeyRelease();
 });
 
 uIOhook.on('mousedown', (e) => {
@@ -361,6 +374,7 @@ uIOhook.on('mouseup', (e) => {
 
     const btnName = `Mouse${e.button}`;
     pressedKeys.delete(btnName);
+    checkHotkeyRelease();
 });
 
 uIOhook.start();
@@ -460,6 +474,19 @@ function returnFocusToGame() {
     }
 }
 
+const activeSoftMuteKeys = new Set();
+const activeSoftDeafenKeys = new Set();
+let isSoftMutedSent = false;
+let isSoftDeafenedSent = false;
+
+function parseHotkeyInput(inputStr) {
+    if (!inputStr || typeof inputStr !== 'string') return [];
+    return inputStr
+        .split(',')
+        .map(k => normalizeHotkey(k.trim()))
+        .filter(k => k.length > 0);
+}
+
 function checkHotkeys() {
     const pressedCombo = Array.from(pressedKeys).join('+');
     
@@ -499,6 +526,74 @@ function checkHotkeys() {
             returnFocusToGame();
         }
         mainWindow.webContents.send('toggle-typing', typingMode);
+    }
+
+    // Check soft mute hotkeys
+    const softMuteKeys = parseHotkeyInput(store.get('softMuteKey'));
+    const softMuteMode = store.get('softMuteMode') || 'toggle';
+
+    for (const key of softMuteKeys) {
+        if (key === pressedCombo || pressedKeys.has(key)) {
+            if (softMuteMode === 'hold') {
+                activeSoftMuteKeys.add(key);
+                if (!isSoftMutedSent) {
+                    isSoftMutedSent = true;
+                    sendPluginWspayload({ type: "SET_SOFT_MUTE", state: true });
+                }
+            } else {
+                sendPluginWspayload({ type: "TOGGLE_SOFT_MUTE" });
+            }
+        }
+    }
+
+    // Check soft deafen hotkeys
+    const softDeafenKeys = parseHotkeyInput(store.get('softDeafenKey'));
+    const softDeafenMode = store.get('softDeafenMode') || 'toggle';
+
+    for (const key of softDeafenKeys) {
+        if (key === pressedCombo || pressedKeys.has(key)) {
+            if (softDeafenMode === 'hold') {
+                activeSoftDeafenKeys.add(key);
+                if (!isSoftDeafenedSent) {
+                    isSoftDeafenedSent = true;
+                    sendPluginWspayload({ type: "SET_SOFT_DEAFEN", state: true });
+                }
+            } else {
+                sendPluginWspayload({ type: "TOGGLE_SOFT_DEAFEN" });
+            }
+        }
+    }
+}
+
+function checkHotkeyRelease() {
+    const pressedCombo = Array.from(pressedKeys).join('+');
+
+    const softMuteKeys = parseHotkeyInput(store.get('softMuteKey'));
+    const softMuteMode = store.get('softMuteMode') || 'toggle';
+    if (softMuteMode === 'hold' && isSoftMutedSent) {
+        for (const activeKey of Array.from(activeSoftMuteKeys)) {
+            if (activeKey !== pressedCombo && !pressedKeys.has(activeKey)) {
+                activeSoftMuteKeys.delete(activeKey);
+            }
+        }
+        if (activeSoftMuteKeys.size === 0) {
+            isSoftMutedSent = false;
+            sendPluginWspayload({ type: "SET_SOFT_MUTE", state: false });
+        }
+    }
+
+    const softDeafenKeys = parseHotkeyInput(store.get('softDeafenKey'));
+    const softDeafenMode = store.get('softDeafenMode') || 'toggle';
+    if (softDeafenMode === 'hold' && isSoftDeafenedSent) {
+        for (const activeKey of Array.from(activeSoftDeafenKeys)) {
+            if (activeKey !== pressedCombo && !pressedKeys.has(activeKey)) {
+                activeSoftDeafenKeys.delete(activeKey);
+            }
+        }
+        if (activeSoftDeafenKeys.size === 0) {
+            isSoftDeafenedSent = false;
+            sendPluginWspayload({ type: "SET_SOFT_DEAFEN", state: false });
+        }
     }
 }
 
@@ -560,6 +655,10 @@ ipcMain.on('save-settings', (event, newConfig) => {
     store.set('position', newConfig.position);
     store.set('visibilityKey', newConfig.visibilityKey);
     store.set('typingKey', newConfig.typingKey);
+    store.set('softMuteKey', newConfig.softMuteKey || '');
+    store.set('softMuteMode', newConfig.softMuteMode || 'toggle');
+    store.set('softDeafenKey', newConfig.softDeafenKey || '');
+    store.set('softDeafenMode', newConfig.softDeafenMode || 'toggle');
     store.set('vencordPluginPath', newConfig.vencordPluginPath);
 
     if (mainWindow) {
@@ -568,7 +667,7 @@ ipcMain.on('save-settings', (event, newConfig) => {
         mainWindow.webContents.send('set-typing-key', (newConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: newConfig.autoHide,
-            autoHideDelay: newConfig.autoHideDelay,
+            autoHideDelay: typeof newConfig.autoHideDelay === 'number' ? newConfig.autoHideDelay : 20,
             typingKeepsAwake: newConfig.typingKeepsAwake
         });
         mainWindow.webContents.send('set-sync-deleted', newConfig.deleteMessages);
@@ -613,7 +712,7 @@ ipcMain.on('preview-settings', (event, previewConfig) => {
         mainWindow.webContents.send('set-typing-key', (previewConfig.typingKey || 'CommandOrControl+Shift+Enter').replace(/CommandOrControl/g, 'Ctrl').replace(/Cmd/g, 'Ctrl').replace(/Control/g, 'Ctrl'));
         mainWindow.webContents.send('set-auto-hide', {
             autoHide: previewConfig.autoHide !== false,
-            autoHideDelay: previewConfig.autoHideDelay || 20,
+            autoHideDelay: typeof previewConfig.autoHideDelay === 'number' ? previewConfig.autoHideDelay : 20,
             typingKeepsAwake: previewConfig.typingKeepsAwake !== false
         });
         mainWindow.webContents.send('set-sync-deleted', previewConfig.deleteMessages);

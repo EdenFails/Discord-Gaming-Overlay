@@ -88,6 +88,14 @@ function ensureWebSocketConnected(onOpenCallback?: () => void) {
                         autoMonitorVoiceSetting = data.autoMonitorVoice;
                         sendVoiceToOverlay();
                     }
+                } else if (data.type === "TOGGLE_SOFT_MUTE") {
+                    toggleSoftMute();
+                } else if (data.type === "SET_SOFT_MUTE") {
+                    setSoftMute(Boolean(data.state));
+                } else if (data.type === "TOGGLE_SOFT_DEAFEN") {
+                    toggleSoftDeafen();
+                } else if (data.type === "SET_SOFT_DEAFEN") {
+                    setSoftDeafen(Boolean(data.state));
                 }
             } catch (e) {
                 console.error("Overlay Bridge WS Error:", e);
@@ -267,6 +275,69 @@ function sendMessagesToOverlay() {
     } catch (e: any) {
         console.error("Error parsing messages:", e);
     }
+}
+
+let isSoftMuted = false;
+let isSoftDeafened = false;
+
+function applySoftAudioState() {
+    try {
+        const meStore = MediaEngineStore || findStore("MediaEngineStore") || findByProps("getMediaEngine", "setSelfMute");
+        const mediaEngine = meStore?.getMediaEngine?.() || meStore || findByProps("setSelfMute", "setSelfDeaf");
+        
+        if (mediaEngine) {
+            if (typeof mediaEngine.setSelfMute === "function") {
+                mediaEngine.setSelfMute(isSoftMuted);
+            }
+            if (typeof mediaEngine.setSelfDeafen === "function") {
+                mediaEngine.setSelfDeafen(isSoftDeafened);
+            }
+        }
+    } catch (e) {
+        console.error("[GamingOverlay Bridge] Soft Mute/Deafen Error:", e);
+    }
+}
+
+function setSoftMute(state: boolean) {
+    if (isSoftMuted === state) return;
+    isSoftMuted = state;
+    if (!isSoftMuted && isSoftDeafened) {
+        isSoftDeafened = false;
+    }
+    applySoftAudioState();
+    addVoiceLog(isSoftMuted ? "🎙 Soft Muted (Local)" : "🎙 Soft Unmuted (Local)", isSoftMuted ? "force_mute" : "mute");
+    sendVoiceToOverlay();
+}
+
+function setSoftDeafen(state: boolean) {
+    if (isSoftDeafened === state) return;
+    isSoftDeafened = state;
+    if (isSoftDeafened) {
+        isSoftMuted = true;
+    }
+    applySoftAudioState();
+    addVoiceLog(isSoftDeafened ? "🎧 Soft Deafened (Local)" : "🎧 Soft Undeafened (Local)", isSoftDeafened ? "force_deafen" : "deafen");
+    sendVoiceToOverlay();
+}
+
+function toggleSoftMute() {
+    isSoftMuted = !isSoftMuted;
+    if (!isSoftMuted && isSoftDeafened) {
+        isSoftDeafened = false;
+    }
+    applySoftAudioState();
+    addVoiceLog(isSoftMuted ? "🎙 Soft Muted (Local)" : "🎙 Soft Unmuted (Local)", isSoftMuted ? "force_mute" : "mute");
+    sendVoiceToOverlay();
+}
+
+function toggleSoftDeafen() {
+    isSoftDeafened = !isSoftDeafened;
+    if (isSoftDeafened) {
+        isSoftMuted = true;
+    }
+    applySoftAudioState();
+    addVoiceLog(isSoftDeafened ? "🎧 Soft Deafened (Local)" : "🎧 Soft Undeafened (Local)", isSoftDeafened ? "force_deafen" : "deafen");
+    sendVoiceToOverlay();
 }
 
 function addVoiceLog(text: string, type: string) {
@@ -458,6 +529,9 @@ function sendVoiceToOverlay() {
                 }
             } catch (e) {}
 
+            const myId = uStore ? uStore.getCurrentUser?.()?.id : null;
+            const isMe = String(uid) === String(myId);
+
             return {
                 userId: uid,
                 username: uname,
@@ -467,6 +541,8 @@ function sendVoiceToOverlay() {
                 isDeafened: Boolean(vs.deaf || vs.selfDeaf),
                 isForceMuted: Boolean(vs.mute),
                 isForceDeafened: Boolean(vs.deaf),
+                isSoftMuted: isMe ? isSoftMuted : false,
+                isSoftDeafened: isMe ? isSoftDeafened : false,
                 isFriend: isFriend,
                 isStaff: isStaff,
                 isLive: isLive,

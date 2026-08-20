@@ -25,6 +25,10 @@ const displayInput = document.getElementById('display-input');
 const positionInput = document.getElementById('position-input');
 const visibilityKeyInput = document.getElementById('visibility-key-input');
 const typingKeyInput = document.getElementById('typing-key-input');
+const softMuteKeyInput = document.getElementById('soft-mute-key-input');
+const softMuteModeInput = document.getElementById('soft-mute-mode-input');
+const softDeafenKeyInput = document.getElementById('soft-deafen-key-input');
+const softDeafenModeInput = document.getElementById('soft-deafen-mode-input');
 const vencordPluginPathInput = document.getElementById('vencord-plugin-path-input');
 const messageChimeInput = document.getElementById('message-chime-input');
 const chimeCooldownInput = document.getElementById('chime-cooldown-input');
@@ -54,6 +58,12 @@ function sendLiveUpdate() {
         highlightKeywords: highlightKeywordsInput ? highlightKeywordsInput.value : '',
         displayId: parseInt(displayInput.value),
         position: positionInput.value,
+        visibilityKey: visibilityKeyInput.value,
+        typingKey: typingKeyInput.value,
+        softMuteKey: softMuteKeyInput ? softMuteKeyInput.value : '',
+        softMuteMode: softMuteModeInput ? softMuteModeInput.value : 'toggle',
+        softDeafenKey: softDeafenKeyInput ? softDeafenKeyInput.value : '',
+        softDeafenMode: softDeafenModeInput ? softDeafenModeInput.value : 'toggle',
         messageChimeEnabled: messageChimeInput.checked,
         messageChimeCooldown: parseInt(chimeCooldownInput.value) || 5
     });
@@ -226,6 +236,10 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     positionInput.value = config.position;
     visibilityKeyInput.value = config.visibilityKey;
     typingKeyInput.value = config.typingKey;
+    if (softMuteKeyInput) softMuteKeyInput.value = config.softMuteKey || '';
+    if (softMuteModeInput) softMuteModeInput.value = config.softMuteMode || 'toggle';
+    if (softDeafenKeyInput) softDeafenKeyInput.value = config.softDeafenKey || '';
+    if (softDeafenModeInput) softDeafenModeInput.value = config.softDeafenMode || 'toggle';
     if (vencordPluginPathInput) {
         vencordPluginPathInput.value = config.vencordPluginPath || '';
     }
@@ -289,6 +303,10 @@ saveBtn.addEventListener('click', () => {
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
         typingKey: typingKeyInput.value,
+        softMuteKey: softMuteKeyInput ? softMuteKeyInput.value : '',
+        softMuteMode: softMuteModeInput ? softMuteModeInput.value : 'toggle',
+        softDeafenKey: softDeafenKeyInput ? softDeafenKeyInput.value : '',
+        softDeafenMode: softDeafenModeInput ? softDeafenModeInput.value : 'toggle',
         vencordPluginPath: vencordPluginPathInput ? vencordPluginPathInput.value : '',
         messageChimeEnabled: messageChimeInput ? messageChimeInput.checked : true,
         messageChimeCooldown: chimeCooldownInput ? (parseInt(chimeCooldownInput.value) || 5) : 5
