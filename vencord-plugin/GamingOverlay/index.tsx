@@ -286,12 +286,32 @@ function applySoftAudioState() {
         const mediaEngine = meStore?.getMediaEngine?.() || meStore || findByProps("setSelfMute", "setSelfDeaf");
         
         if (mediaEngine) {
-            if (typeof mediaEngine.setSelfMute === "function") {
-                mediaEngine.setSelfMute(isSoftMuted);
+            if (typeof mediaEngine.setSelfMute === "function") mediaEngine.setSelfMute(isSoftMuted);
+            if (typeof mediaEngine.setSelfDeafen === "function") mediaEngine.setSelfDeafen(isSoftDeafened);
+            if (typeof mediaEngine.setMute === "function") mediaEngine.setMute(isSoftMuted);
+            if (typeof mediaEngine.setDeaf === "function") mediaEngine.setDeaf(isSoftDeafened);
+
+            const rawConns = mediaEngine.connections || meStore?.connections;
+            let conns: any[] = [];
+            if (rawConns instanceof Set) conns = Array.from(rawConns);
+            else if (Array.isArray(rawConns)) conns = rawConns;
+            else if (typeof mediaEngine.eachConnection === "function") {
+                mediaEngine.eachConnection((c: any) => conns.push(c));
             }
-            if (typeof mediaEngine.setSelfDeafen === "function") {
-                mediaEngine.setSelfDeafen(isSoftDeafened);
-            }
+
+            conns.forEach((conn: any) => {
+                if (conn) {
+                    if (typeof conn.setSelfMute === "function") conn.setSelfMute(isSoftMuted);
+                    if (typeof conn.setSelfDeafen === "function") conn.setSelfDeafen(isSoftDeafened);
+                    if (typeof conn.setMute === "function") conn.setMute(isSoftMuted);
+                    if (typeof conn.setDeaf === "function") conn.setDeaf(isSoftDeafened);
+                }
+            });
+        }
+
+        const myId = UserStore?.getCurrentUser?.()?.id;
+        if (myId && isSoftMuted) {
+            speakingUsersSet.delete(myId);
         }
     } catch (e) {
         console.error("[GamingOverlay Bridge] Soft Mute/Deafen Error:", e);

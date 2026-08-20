@@ -79,6 +79,56 @@
             border-color: #5865F2;
         }
 
+        .keybind-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+
+        .keybind-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .keybind-row input {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .delete-keybind-btn {
+            background-color: rgba(237, 66, 69, 0.2);
+            color: #f23f43;
+            border: 1px solid rgba(237, 66, 69, 0.4);
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .delete-keybind-btn:hover {
+            background-color: rgba(237, 66, 69, 0.4);
+        }
+
+        .add-keybind-btn {
+            background-color: rgba(88, 101, 242, 0.15);
+            color: #5865F2;
+            border: 1px dashed rgba(88, 101, 242, 0.5);
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .add-keybind-btn:hover {
+            background-color: rgba(88, 101, 242, 0.3);
+        }
+
         .save-btn {
             background-color: #5865F2;
             color: white;
@@ -259,26 +309,34 @@
             </select>
         </div>
         <div class="setting-group">
-            <span class="setting-label">Soft Mute Hotkey(s)</span>
-            <div class="setting-description">Global keybinds (comma-separated for multiple, e.g. V, C, X) to silently mute your mic locally without server sound chimes.</div>
-            <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 4px;">
-                <input type="text" id="soft-mute-key-input" placeholder="e.g. V, C, X or Ctrl+Alt+M" style="flex: 1;">
-                <select id="soft-mute-mode-input" style="width: 150px;">
+            <span class="setting-label">Soft Mute Keybinds</span>
+            <div class="setting-description">Global hotkeys to silently mute your mic locally without server sound chimes. Click an input to record any chorded key combo (e.g. Ctrl+Shift+M or V).</div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; color: #949ba4;">Behavior Mode:</span>
+                <select id="soft-mute-mode-input" style="width: 170px;">
                     <option value="toggle">Toggle (Press once)</option>
                     <option value="hold">Hold (Push-to-Mute)</option>
                 </select>
             </div>
+            <div id="soft-mute-keybinds-container" class="keybind-list-container">
+                <!-- Dynamic keybind rows -->
+            </div>
+            <button type="button" id="add-soft-mute-keybind-btn" class="add-keybind-btn">+ Add Soft Mute Keybind</button>
         </div>
         <div class="setting-group">
-            <span class="setting-label">Soft Deafen + Mute Hotkey(s)</span>
-            <div class="setting-description">Global keybinds (comma-separated for multiple, e.g. B, N) to silently deafen & mute incoming/outgoing audio locally.</div>
-            <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 4px;">
-                <input type="text" id="soft-deafen-key-input" placeholder="e.g. B, N or Ctrl+Alt+D" style="flex: 1;">
-                <select id="soft-deafen-mode-input" style="width: 150px;">
+            <span class="setting-label">Soft Deafen + Mute Keybinds</span>
+            <div class="setting-description">Global hotkeys to silently deafen & mute incoming/outgoing audio locally. Click an input to record any key combo.</div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; color: #949ba4;">Behavior Mode:</span>
+                <select id="soft-deafen-mode-input" style="width: 170px;">
                     <option value="toggle">Toggle (Press once)</option>
                     <option value="hold">Hold (Push-to-Deafen)</option>
                 </select>
             </div>
+            <div id="soft-deafen-keybinds-container" class="keybind-list-container">
+                <!-- Dynamic keybind rows -->
+            </div>
+            <button type="button" id="add-soft-deafen-keybind-btn" class="add-keybind-btn">+ Add Soft Deafen Keybind</button>
         </div>
     </div>
 

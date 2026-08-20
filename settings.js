@@ -60,9 +60,9 @@ function sendLiveUpdate() {
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
         typingKey: typingKeyInput.value,
-        softMuteKey: softMuteKeyInput ? softMuteKeyInput.value : '',
+        softMuteKey: getKeybindsFromContainer(softMuteContainer),
         softMuteMode: softMuteModeInput ? softMuteModeInput.value : 'toggle',
-        softDeafenKey: softDeafenKeyInput ? softDeafenKeyInput.value : '',
+        softDeafenKey: getKeybindsFromContainer(softDeafenContainer),
         softDeafenMode: softDeafenModeInput ? softDeafenModeInput.value : 'toggle',
         messageChimeEnabled: messageChimeInput.checked,
         messageChimeCooldown: parseInt(chimeCooldownInput.value) || 5
@@ -172,6 +172,78 @@ ipcRenderer.on('recording-hotkey-done', (event, combo) => {
 setupKeybindListener(visibilityKeyInput);
 setupKeybindListener(typingKeyInput);
 
+const softMuteContainer = document.getElementById('soft-mute-keybinds-container');
+const addSoftMuteBtn = document.getElementById('add-soft-mute-keybind-btn');
+
+const softDeafenContainer = document.getElementById('soft-deafen-keybinds-container');
+const addSoftDeafenBtn = document.getElementById('add-soft-deafen-keybind-btn');
+
+function createKeybindRow(container, keyVal = '') {
+    const row = document.createElement('div');
+    row.className = 'keybind-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.readOnly = true;
+    input.placeholder = 'Click to record keybind...';
+    input.value = keyVal;
+
+    setupKeybindListener(input);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'delete-keybind-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Remove keybind';
+    delBtn.addEventListener('click', () => {
+        row.remove();
+        sendLiveUpdate();
+    });
+
+    row.appendChild(input);
+    row.appendChild(delBtn);
+    container.appendChild(row);
+    return input;
+}
+
+function getKeybindsFromContainer(container) {
+    if (!container) return '';
+    const inputs = container.querySelectorAll('input');
+    const keys = [];
+    inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val && val !== 'Listening...') {
+            keys.push(val);
+        }
+    });
+    return keys.join(', ');
+}
+
+function setKeybindsInContainer(container, keyStr) {
+    if (!container) return;
+    container.innerHTML = '';
+    const keys = (keyStr || '').split(',').map(k => k.trim()).filter(k => k.length > 0);
+    if (keys.length === 0) {
+        createKeybindRow(container, '');
+    } else {
+        keys.forEach(k => createKeybindRow(container, k));
+    }
+}
+
+if (addSoftMuteBtn && softMuteContainer) {
+    addSoftMuteBtn.addEventListener('click', () => {
+        const input = createKeybindRow(softMuteContainer, '');
+        input.focus();
+    });
+}
+
+if (addSoftDeafenBtn && softDeafenContainer) {
+    addSoftDeafenBtn.addEventListener('click', () => {
+        const input = createKeybindRow(softDeafenContainer, '');
+        input.focus();
+    });
+}
+
 displayInput.addEventListener('change', sendLiveUpdate);
 positionInput.addEventListener('change', sendLiveUpdate);
 
@@ -236,9 +308,9 @@ ipcRenderer.on('load-settings', (event, { config, displays }) => {
     positionInput.value = config.position;
     visibilityKeyInput.value = config.visibilityKey;
     typingKeyInput.value = config.typingKey;
-    if (softMuteKeyInput) softMuteKeyInput.value = config.softMuteKey || '';
+    setKeybindsInContainer(softMuteContainer, config.softMuteKey);
     if (softMuteModeInput) softMuteModeInput.value = config.softMuteMode || 'toggle';
-    if (softDeafenKeyInput) softDeafenKeyInput.value = config.softDeafenKey || '';
+    setKeybindsInContainer(softDeafenContainer, config.softDeafenKey);
     if (softDeafenModeInput) softDeafenModeInput.value = config.softDeafenMode || 'toggle';
     if (vencordPluginPathInput) {
         vencordPluginPathInput.value = config.vencordPluginPath || '';
@@ -303,9 +375,9 @@ saveBtn.addEventListener('click', () => {
         position: positionInput.value,
         visibilityKey: visibilityKeyInput.value,
         typingKey: typingKeyInput.value,
-        softMuteKey: softMuteKeyInput ? softMuteKeyInput.value : '',
+        softMuteKey: getKeybindsFromContainer(softMuteContainer),
         softMuteMode: softMuteModeInput ? softMuteModeInput.value : 'toggle',
-        softDeafenKey: softDeafenKeyInput ? softDeafenKeyInput.value : '',
+        softDeafenKey: getKeybindsFromContainer(softDeafenContainer),
         softDeafenMode: softDeafenModeInput ? softDeafenModeInput.value : 'toggle',
         vencordPluginPath: vencordPluginPathInput ? vencordPluginPathInput.value : '',
         messageChimeEnabled: messageChimeInput ? messageChimeInput.checked : true,
