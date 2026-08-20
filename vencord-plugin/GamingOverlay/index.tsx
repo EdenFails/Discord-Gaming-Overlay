@@ -15,7 +15,8 @@ import {
     RelationshipStore,
     ApplicationStreamingStore,
     ChannelRTCStore,
-    TypingStore
+    TypingStore,
+    MediaEngineStore
 } from "@webpack/common";
 import { findByProps, findStore } from "@webpack";
 import { addContextMenuPatch, removeContextMenuPatch } from "@api/ContextMenu";
@@ -281,33 +282,68 @@ let isSoftMuted = false;
 let isSoftDeafened = false;
 
 let savedInputVolume: number | null = null;
+let savedOutputVolume: number | null = null;
 
 function applySoftAudioState() {
     try {
-        const meStore = MediaEngineStore || findStore("MediaEngineStore") || findByProps("getMediaEngine", "setSelfMute", "setInputVolume");
+        const meStore = MediaEngineStore || findStore("MediaEngineStore");
         const mediaEngine = meStore?.getMediaEngine?.() || meStore || findByProps("setSelfMute", "setInputVolume");
-        
-        if (mediaEngine) {
-            // Mute input capture volume directly at the MediaEngine level so Discord VAD measures 0 dB
-            if (isSoftMuted) {
-                if (savedInputVolume === null && typeof mediaEngine.getInputVolume === "function") {
-                    const currentVol = mediaEngine.getInputVolume();
-                    if (typeof currentVol === "number" && currentVol > 0) {
-                        savedInputVolume = currentVol;
-                    }
-                }
-                if (typeof mediaEngine.setInputVolume === "function") {
-                    mediaEngine.setInputVolume(0);
-                }
-            } else {
-                if (savedInputVolume !== null && typeof mediaEngine.setInputVolume === "function") {
-                    mediaEngine.setInputVolume(savedInputVolume);
-                    savedInputVolume = null;
-                } else if (typeof mediaEngine.setInputVolume === "function") {
-                    mediaEngine.setInputVolume(100);
+        const audioActions = findByProps("setInputVolume", "toggleSelfMute") || findByProps("setTemporarySelfMute") || findByProps("setInputVolume");
+
+        console.log("[GamingOverlay Bridge] Applying Soft Audio State:", { isSoftMuted, isSoftDeafened, meStore: Boolean(meStore), mediaEngine: Boolean(mediaEngine), audioActions: Boolean(audioActions) });
+
+        // 1. Hardware Input Volume Zeroing via AudioActions & MediaEngine
+        if (isSoftMuted) {
+            if (savedInputVolume === null) {
+                const currentVol = meStore?.getInputVolume?.() ?? mediaEngine?.getInputVolume?.();
+                if (typeof currentVol === "number" && currentVol > 0) {
+                    savedInputVolume = currentVol;
                 }
             }
+            if (audioActions && typeof audioActions.setInputVolume === "function") {
+                audioActions.setInputVolume(0);
+            }
+            if (mediaEngine && typeof mediaEngine.setInputVolume === "function") {
+                mediaEngine.setInputVolume(0);
+            }
+        } else {
+            const restoreVol = savedInputVolume ?? 100;
+            if (audioActions && typeof audioActions.setInputVolume === "function") {
+                audioActions.setInputVolume(restoreVol);
+            }
+            if (mediaEngine && typeof mediaEngine.setInputVolume === "function") {
+                mediaEngine.setInputVolume(restoreVol);
+            }
+            savedInputVolume = null;
+        }
 
+        // 2. Hardware Output Volume Zeroing for Soft Deafen
+        if (isSoftDeafened) {
+            if (savedOutputVolume === null) {
+                const currentOutVol = meStore?.getOutputVolume?.() ?? mediaEngine?.getOutputVolume?.();
+                if (typeof currentOutVol === "number" && currentOutVol > 0) {
+                    savedOutputVolume = currentOutVol;
+                }
+            }
+            if (audioActions && typeof audioActions.setOutputVolume === "function") {
+                audioActions.setOutputVolume(0);
+            }
+            if (mediaEngine && typeof mediaEngine.setOutputVolume === "function") {
+                mediaEngine.setOutputVolume(0);
+            }
+        } else if (savedOutputVolume !== null) {
+            const restoreOutVol = savedOutputVolume ?? 100;
+            if (audioActions && typeof audioActions.setOutputVolume === "function") {
+                audioActions.setOutputVolume(restoreOutVol);
+            }
+            if (mediaEngine && typeof mediaEngine.setOutputVolume === "function") {
+                mediaEngine.setOutputVolume(restoreOutVol);
+            }
+            savedOutputVolume = null;
+        }
+
+        // 3. MediaEngine WebRTC RTC Connections Mute Enforcement
+        if (mediaEngine) {
             if (typeof mediaEngine.setSelfMute === "function") mediaEngine.setSelfMute(isSoftMuted);
             if (typeof mediaEngine.setSelfDeafen === "function") mediaEngine.setSelfDeafen(isSoftDeafened);
             if (typeof mediaEngine.setMute === "function") mediaEngine.setMute(isSoftMuted);
@@ -331,6 +367,7 @@ function applySoftAudioState() {
             });
         }
 
+        // 4. Clear local speaking ring state
         const myId = UserStore?.getCurrentUser?.()?.id;
         if (myId && isSoftMuted) {
             speakingUsersSet.delete(myId);
@@ -578,7 +615,7 @@ function sendVoiceToOverlay() {
                 userId: uid,
                 username: uname,
                 avatarUrl: avatar,
-                isSpeaking: speakingUsersSet.has(uid),
+                isSpeaking: isMe && isSoftMuted ? false : speakingUsersSet.has(uid),
                 isMuted: Boolean(vs.mute || vs.selfMute),
                 isDeafened: Boolean(vs.deaf || vs.selfDeaf),
                 isForceMuted: Boolean(vs.mute),
