@@ -377,26 +377,64 @@ function applySoftAudioState() {
     }
 }
 
+let softMuteReleaseTimer: any = null;
+let softDeafenReleaseTimer: any = null;
+const SOFT_RELEASE_DELAY_MS = 350; // 350ms split-second hangover buffer to prevent audio slippage
+
 function setSoftMute(state: boolean) {
-    if (isSoftMuted === state) return;
-    isSoftMuted = state;
-    if (!isSoftMuted && isSoftDeafened) {
-        isSoftDeafened = false;
+    if (softMuteReleaseTimer) {
+        clearTimeout(softMuteReleaseTimer);
+        softMuteReleaseTimer = null;
     }
-    applySoftAudioState();
-    addVoiceLog(isSoftMuted ? "🎙 Soft Muted (Local)" : "🎙 Soft Unmuted (Local)", isSoftMuted ? "force_mute" : "mute");
-    sendVoiceToOverlay();
+
+    if (state) {
+        if (!isSoftMuted) {
+            isSoftMuted = true;
+            applySoftAudioState();
+            addVoiceLog("🎙 Soft Muted (Local)", "force_mute");
+            sendVoiceToOverlay();
+        }
+    } else {
+        if (isSoftMuted) {
+            softMuteReleaseTimer = setTimeout(() => {
+                isSoftMuted = false;
+                if (isSoftDeafened) {
+                    isSoftDeafened = false;
+                }
+                applySoftAudioState();
+                addVoiceLog("🎙 Soft Unmuted (Local)", "mute");
+                sendVoiceToOverlay();
+                softMuteReleaseTimer = null;
+            }, SOFT_RELEASE_DELAY_MS);
+        }
+    }
 }
 
 function setSoftDeafen(state: boolean) {
-    if (isSoftDeafened === state) return;
-    isSoftDeafened = state;
-    if (isSoftDeafened) {
-        isSoftMuted = true;
+    if (softDeafenReleaseTimer) {
+        clearTimeout(softDeafenReleaseTimer);
+        softDeafenReleaseTimer = null;
     }
-    applySoftAudioState();
-    addVoiceLog(isSoftDeafened ? "🎧 Soft Deafened (Local)" : "🎧 Soft Undeafened (Local)", isSoftDeafened ? "force_deafen" : "deafen");
-    sendVoiceToOverlay();
+
+    if (state) {
+        if (!isSoftDeafened) {
+            isSoftDeafened = true;
+            isSoftMuted = true;
+            applySoftAudioState();
+            addVoiceLog("🎧 Soft Deafened (Local)", "force_deafen");
+            sendVoiceToOverlay();
+        }
+    } else {
+        if (isSoftDeafened) {
+            softDeafenReleaseTimer = setTimeout(() => {
+                isSoftDeafened = false;
+                applySoftAudioState();
+                addVoiceLog("🎧 Soft Undeafened (Local)", "deafen");
+                sendVoiceToOverlay();
+                softDeafenReleaseTimer = null;
+            }, SOFT_RELEASE_DELAY_MS);
+        }
+    }
 }
 
 function toggleSoftMute() {
