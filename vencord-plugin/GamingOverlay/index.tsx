@@ -280,12 +280,34 @@ function sendMessagesToOverlay() {
 let isSoftMuted = false;
 let isSoftDeafened = false;
 
+let savedInputVolume: number | null = null;
+
 function applySoftAudioState() {
     try {
-        const meStore = MediaEngineStore || findStore("MediaEngineStore") || findByProps("getMediaEngine", "setSelfMute");
-        const mediaEngine = meStore?.getMediaEngine?.() || meStore || findByProps("setSelfMute", "setSelfDeaf");
+        const meStore = MediaEngineStore || findStore("MediaEngineStore") || findByProps("getMediaEngine", "setSelfMute", "setInputVolume");
+        const mediaEngine = meStore?.getMediaEngine?.() || meStore || findByProps("setSelfMute", "setInputVolume");
         
         if (mediaEngine) {
+            // Mute input capture volume directly at the MediaEngine level so Discord VAD measures 0 dB
+            if (isSoftMuted) {
+                if (savedInputVolume === null && typeof mediaEngine.getInputVolume === "function") {
+                    const currentVol = mediaEngine.getInputVolume();
+                    if (typeof currentVol === "number" && currentVol > 0) {
+                        savedInputVolume = currentVol;
+                    }
+                }
+                if (typeof mediaEngine.setInputVolume === "function") {
+                    mediaEngine.setInputVolume(0);
+                }
+            } else {
+                if (savedInputVolume !== null && typeof mediaEngine.setInputVolume === "function") {
+                    mediaEngine.setInputVolume(savedInputVolume);
+                    savedInputVolume = null;
+                } else if (typeof mediaEngine.setInputVolume === "function") {
+                    mediaEngine.setInputVolume(100);
+                }
+            }
+
             if (typeof mediaEngine.setSelfMute === "function") mediaEngine.setSelfMute(isSoftMuted);
             if (typeof mediaEngine.setSelfDeafen === "function") mediaEngine.setSelfDeafen(isSoftDeafened);
             if (typeof mediaEngine.setMute === "function") mediaEngine.setMute(isSoftMuted);
@@ -627,6 +649,12 @@ function handleVoiceEvent(data?: any) {
 
 function handleSpeakingEvent(data: any) {
     if (!data || !data.userId) return;
+    const myId = UserStore?.getCurrentUser?.()?.id;
+    if (isSoftMuted && String(data.userId) === String(myId)) {
+        speakingUsersSet.delete(data.userId);
+        sendVoiceToOverlay();
+        return;
+    }
     if (data.speakingFlags && data.speakingFlags > 0) {
         speakingUsersSet.add(data.userId);
     } else {
